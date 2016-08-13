@@ -1,8 +1,13 @@
 from timeit import default_timer as timer
+import copy
 
 """
 Allows one level of loop, but no detail into inner loops. Branching within the
 loop is supported (doesn't need to hit same stamps every iteration).
+
+Currently intended for each timer object to hold only one times object, but
+this could change if it becomes helpful to hold more.
+
 """
 
 #
@@ -25,11 +30,27 @@ class Times(object):
                              intervals=dict(),
                              loops=dict(),
                              total=0.,
-                             self=0.,
+                             self_=0.,
                              self_agg=0.,
                              parent=None,
                              children=dict(),
                              )
+
+    def __deepcopy__(self, memo):
+        new = type(self)()
+        new.__dict__.update(self.__dict__)
+        new.stamps = copy.deepcopy(self.stamps, memo)
+        new.intervals = copy.deepcopy(self.intervals, memo)
+        print "in my __deepcopy__"
+        print self
+        print new
+        new.loops = copy.deepcopy(self.loops, memo)
+        # Don't copy the (timer) objects inside children, leave as shallow copy.
+        return new
+
+    def clear(self):
+        name = self.name
+        self.__init__(name=name)
 
     def absorb(self, child_times, position_name):
         name_found = False
@@ -42,31 +63,34 @@ class Times(object):
                 break
         if not name_found:
             raise ValueError("position_name must be an existing stamp, interval, loop, loop-stamp, loop-interval in parent")
-        existing_child = False
-        existing_parent = False
+        is_existing_child = False
+        is_existing_parent = False
         if position_name in self.children:
-            existing_parent = True
+            is_existing_parent = True
             for child_old in self.children[position_name]:
                 if child_old.name == child_times.name:
-                    existing_child = True
+                    is_existing_child = True
                     break
-        if not existing_parent:
+        if not is_existing_parent:
             self.children[position_name] = []
-        if not existing_child:
+        if not is_existing_child:
             child_times.parent = self
-            self.children[position_name] += [child_times]
+            self.children[position_name] += [copy.deepcopy(child_times)]
         else:
-            self._merge_struct_dicts(child_old, child_times, 'stamps')
-            self._merge_struct_dicts(child_old, child_times, 'intervals')
-            child_old.total += child_times.total
-            child_old.self += child_times.self
-            child_old.self_agg += child_times.self_agg
-            for k, loop in child_times.loops.iteritems():
-                if k in child_old.loops:
-                    self._absorb_loop(child_old.loops[k], loop)
-                else:
-                    child_old.loops[k] = loop
+            self._absorb_existing(child_old, child_times)
         self._absorb_self_agg(child_times.self_agg)
+
+    def _absorb_existing(self, old, new):
+        self._merge_struct_dicts(old, new, 'stamps')
+        self._merge_struct_dicts(old, new, 'intervals')
+        old.total += new.total
+        old.self_ += new.self_
+        old.self_agg += new.self_agg
+        for k, loop in new.loops.iteritems():
+            if k in old.loops:
+                self._absorb_loop(old.loops[k], loop)
+            else:
+                old.loops[k] = loop
 
     def _merge_struct_dicts(self, old, new, attr):
         old_dict = getattr(old, attr)
@@ -79,14 +103,25 @@ class Times(object):
 
     def _absorb_loop(self, old_loop, new_loop):
         old_loop.total += new_loop.total
+        old_loop.self_ += new_loop.self_
         self._merge_struct_dicts(old_loop, new_loop, 'stamps')
         self._merge_struct_dicts(old_loop, new_loop, 'intervals')
         if hasattr(new_loop, 'total_itrs') and hasattr(old_loop, 'total_itrs'):
             old_loop.total_itrs += new_loop.total_itrs
-        if hasattr(new_loop, 'stamps_itrs') and hasattr(old_loop, 'stamps_itrs'):
-            old_loop.stamps_itrs += new_loop.stamps_itrs
-        if hasattr(new_loop, 'intervals_itrs') and hasattr(old_loop, 'intervals_itrs'):
-            old_loop.intervals_itrs += new_loop.intervals_itrs
+        for attr in ['stamps_itrs', 'intervals_itrs']:
+            if hasattr(new_loop, attr) and hasattr(old_loop, attr):
+                self._absorb_itrs(old_loop, new_loop, attr)
+
+    def _absorb_itrs(self, old_loop, new_loop, attr):
+        old = getattr(old_loop, attr)
+        new = getattr(new_loop, attr)
+        for k, l in new.iteritems():
+            if k not in old:
+                old[k] = [0.] * old_loop.n_itr
+            old[k] += l
+        for k, l in old.iteritems():
+            if k not in new:
+                l += [0.] * new_loop.n_itr
 
     def _absorb_self_agg(self, agg_time):
         self.self_agg += agg_time
@@ -94,21 +129,23 @@ class Times(object):
             self.parent._absorb_self_agg(agg_time)
 
 
-
-
-
-
-class LoopTimes(Times):
+class LoopTimes(object):
 
     def __init__(self, name=''):
         self.__dict__.update(name=name,
                              stamps=dict(),
                              intervals=dict(),
                              total=0.,
-                             stamps_itrs=list(),
-                             intervals_itrs=list(),
+                             self_=0.,
+                             stamps_itrs=dict(),
+                             intervals_itrs=dict(),
                              total_itrs=list(),
+                             n_itr=0
                              )
+
+    def clear(self):
+        name = self.name
+        self.__init__(name=name)
 
 
 #
@@ -121,13 +158,13 @@ class TimerChecked(object):
     _inactive_error = "Can't use stopped timer, must restart it."
     _no_loop_error = "Must be in timed loop to use loop methods."
 
-    def __init__(self, name='', save_itrs=True):
+    def __init__(self, name='', save_itrs=True, new_times=True):
         self.name = name
         self.save_itrs = save_itrs
         self._open_intervals = {}
         self._loop_open_intervals = {}
-        self.times = Times(self.name)
-        self._current_times = self.times
+        if new_times:
+            self.times = Times(self.name)
         self.while_condition = True
         self._active = True
         self._stamp_names = []
@@ -141,6 +178,17 @@ class TimerChecked(object):
 
     def __exit__(self, *args):
         self._stop()
+
+    def clear(self):
+        name = self.name
+        save_itrs = self.save_itrs
+        self.__init__(name=name, save_itrs=save_itrs, new_times=False)
+        self.times.clear()
+
+    def absorb(self, timer_obj):
+        t = timer()
+        self.times.absorb(timer_obj.times)
+        self.times.self_ += timer() - t
 
     def restart(self):
         self._active = True
@@ -179,7 +227,9 @@ class TimerChecked(object):
         self._stamp_names.append(name)
         self.times.stamps[name] = t - self._last
         self._last = t
-        self.times.self += timer() - t
+        self_ = timer() - t
+        self.times.self_ += self_
+        self.times.self_agg += self_
         return t
 
     def interval(self, name):
@@ -196,7 +246,9 @@ class TimerChecked(object):
             self._open_intervals[name] = t
             if name not in self.times.intervals:
                 self.times.intervals[name] = 0.
-        self.times.self += timer() - t
+        self_ = timer() - t
+        self.times.self_ += self_
+        self.times.self_agg += self_
         return t
 
     def stop(self):
@@ -232,7 +284,7 @@ class TimerChecked(object):
         else:
             self._current_loop.stamps[name] = elapsed
         self._last = t
-        self.times.self += timer() - t
+        self._current_loop.self_ += timer() - t
         return t
 
     def l_interval(self, name):
@@ -255,7 +307,7 @@ class TimerChecked(object):
                     self._current_itr.intervals[name] = 0.
             if name not in self._current_loop.intervals:
                 self._current_loop.intervals[name] = 0.
-        self.times.self += timer() - t
+        self._current_loop.self_ += timer() - t
         return t
 
     def enter_loop(self, name):
@@ -285,7 +337,7 @@ class TimerChecked(object):
             self._current_itr = Times()
         self._itr_ended = False
         self._itr_stamp_names = []
-        self.times.self += timer() - self._loop_start
+        self._current_loop.self_ += timer() - self._loop_start
 
     def loop_end(self):
         t = timer()
@@ -295,18 +347,28 @@ class TimerChecked(object):
         elapsed = t - self._loop_start
         self._current_loop.total += elapsed
         if self.save_itrs:
-            self._current_itr.total = elapsed
-            self._current_loop.stamps_itrs.append(self._current_itr.stamps)
-            self._current_loop.intervals_itrs.append(self._current_itr.intervals)
+            self._append_itrs(self._current_itr.stamps, self._current_loop.stamps_itrs)
+            self._append_itrs(self._current_itr.intervals, self._current_loop.intervals_itrs)
             self._current_loop.total_itrs.append(elapsed)
+            self._current_loop.n_itr += 1
         self._itr_ended = True
-        self.times.self += timer() - t
+        self._current_loop.self_ += timer() - t
+
+    def _append_itrs(self, new_itr, old):
+        for k, t in new_itr.iteritems():
+            if k not in old:
+                old[k] = [0.] * self._current_loop.n_itr
+            old[k].append(t)
+        for k, l in old.iteritems():
+            if k not in new_itr:
+                l.append(0.)
 
     def exit_loop(self):
         if not self._in_loop:
             raise RuntimeError(TimerChecked._no_loop_error)
         if not self._itr_ended:
             raise RuntimeError("Timer loop not ended before exit_loop().")
+        self.times.self_ += self._current_loop.self_
         self._in_loop = False
         self._current_loop = None
         self._current_itr = None

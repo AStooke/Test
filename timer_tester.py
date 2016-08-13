@@ -1,5 +1,5 @@
 # Timer Tester.
-from sandbox.adam.timer3 import Timer
+from timer3 import Timer
 import time
 
 
@@ -25,7 +25,7 @@ import time
 # print t.times
 
 t = Timer(name='BigPoppa')
-print t.times.self
+print t.times.self_
 
 time.sleep(0.1)
 t.stamp('before loop')
@@ -78,6 +78,7 @@ t.stop()
 
 
 t2 = Timer('LilMomma', save_itrs=False)
+t3 = Timer('Baby')
 print 'start2222222'
 for i in t2.timed_for('spoke2', [1, 2, 3]):
     print i
@@ -91,6 +92,18 @@ for i in t2.timed_for('spoke2', [1, 2, 3]):
         time.sleep(0.15)
         t2.l_stamp('branch2')
     t2.l_stamp('second2')
+    t3.clear()
+    for j in t3.timed_for('t3loop', [1, 2, 3, 4, 5]):
+        print 'Inner j: ', j
+        time.sleep(0.1)
+        if i != 2:
+            if j != 3:
+                t3.l_stamp('the_only_one')
+        if i == 2:
+            time.sleep(0.15)
+            t3.l_stamp('oops_another')
+    t2.l_stamp('inner_loop')
+    t2.times.absorb(t3.times, 'inner_loop')
     t2.l_interval('yeah2')
     time.sleep(0.1)
     t2.l_stamp('last2')
@@ -153,7 +166,7 @@ print '\n\n'
 print x.stamps, '\n'
 print x.intervals, '\n'
 print x.total, '\n'
-print x.self, '\n'
+print x.self_, '\n'
 print x.loops, '\n'
 # print x.loops['spoke2'].total_itrs, '\n'
 print x.loops['spoke2'].total, '\n'
@@ -161,3 +174,11 @@ print x.loops['spoke2'].total, '\n'
 print x.loops['spoke2'].stamps, '\n'
 # print x.loops['spoke2'].intervals_itrs, '\n'
 print x.loops['spoke2'].intervals, '\n'
+
+print t3.times.loops, '\n'
+print t3.times.loops['t3loop'].stamps, '\n'
+print t3.times.loops['t3loop'].stamps_itrs, '\n'
+
+print t2.times.children['inner_loop'], '\n'
+print t2.times.children['inner_loop'][0].loops['t3loop'].stamps, '\n'
+print t2.times.children['inner_loop'][0].loops['t3loop'].stamps_itrs, '\n'
