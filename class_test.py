@@ -1,10 +1,15 @@
-def OneAndOnly(inputs):
-    print inputs
+
+from operator import attrgetter
+# def OneAndOnly(inputs):
+#     print inputs
 
 class OneAndOnly(object):
 
     def __init__(self):
-        self.yeah = 1
-        print self.yeah
+        self._yeah = 1
+
+    yeah = property(attrgetter("_yeah"))
+
+
 
 
