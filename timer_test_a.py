@@ -1,8 +1,8 @@
-from timer5 import G_Timer, g_timers
+import gtimer
 import time
 import timer_test_b
 
-t1 = G_Timer('yeah')
+t1 = gtimer.G_Timer('yeah')
 print "t1 in timer_test_a: ", t1
 
 time.sleep(0.1)
@@ -29,6 +29,11 @@ t1.stop()
 
 t1.print_report()
 
-g_timers['there'].print_report()
+t2 = gtimer.get_g_timer('there')
+
+t2.print_report()
 
 t1.print_structure()
+
+print t1.times.self
+t1.times.self = 7.

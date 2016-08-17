@@ -24,8 +24,14 @@ through function returns statements.
 
 class Times(object):
 
-    _grabs_accum_keys = ['total', 'stamps_sum', 'self_', 'self_agg', 'calls',
-                         'calls_agg', 'grabs_agg']
+    _grabs_accum_keys = ['_total',
+                         '_stamps_sum',
+                         '_self',
+                         '_self_agg',
+                         '_calls',
+                         '_calls_agg',
+                         '_grabs_agg'
+                         ]
 
     def __init__(self, name=''):
         self._name = name
@@ -287,7 +293,7 @@ class Timer(object):
         else:
             self._times = Times(self._name)
         self._is_global = False
-        self._global_context = None
+        self._g_context = None
         self._in_loop = False
         self._active = True
         self._start = timer()
@@ -296,13 +302,13 @@ class Timer(object):
         self._itr_stamp_used = dict()
         self._pos_used = []
 
-    name = property(getattr("_name"))
-    times = property(getattr("_times"))
-    is_global = property(getattr("_is_global"))
-    global_context = property(getattr("_global_context"))
-    in_loop = property(getattr("_in_loop"))
-    start = property(getattr("_start"))
-    last = property(getattr("_last"))
+    name = property(attrgetter("_name"))
+    times = property(attrgetter("_times"))
+    is_global = property(attrgetter("_is_global"))
+    g_context = property(attrgetter("_g_context"))
+    in_loop = property(attrgetter("_in_loop"))
+    start = property(attrgetter("_start"))
+    last = property(attrgetter("_last"))
 
     def clear(self):
         name = self._name
@@ -399,7 +405,7 @@ class Timer(object):
         if self._in_loop:
             raise RuntimeError("Cannot stop timer without exiting loop.")
         for name in self._pos_used:
-            if name in self._stamp_names:
+            if name in self._times._stamps_ordered:
                 self._pos_used.remove(name)
         if self._pos_used:
             raise RuntimeError("Children awaiting non-existent graft positions (stamps): {}".format(self._pos_used))
@@ -533,8 +539,8 @@ def _make_g_timer(name, save_itrs, context):
     if name in g_timers[context]:
         raise ValueError("Global timers must have unique names within context.")
     new_timer = Timer(name=name, save_itrs=save_itrs)
-    new_timer.is_global = True
-    new_timer.global_context = context
+    new_timer._is_global = True
+    new_timer._g_context = context
     g_timers[context][name] = new_timer
     return new_timer
 

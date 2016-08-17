@@ -1,4 +1,4 @@
-from timer5 import G_Timer
+from gtimer import G_Timer
 import time
 
 t1, t2 = G_Timer([x for x in ['whoa', 'there']])
