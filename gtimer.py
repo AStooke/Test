@@ -92,13 +92,13 @@ class Times(object):
             raise RuntimeError("Cannot graft running times object, child must be stopped.")
         if position_name not in self._stamps and self._stopped:
             raise ValueError("Position name must be an existing stamp in stopped parent.")
-        is_existing_child = False
         for old_child in self._children:
             if position_name == old_child._pos_in_parent:
                 if child_times._name == old_child._name:
-                    is_existing_child = True
+                    old_child._parent = self
                     self._graft_existing(old_child, child_times)
-        if not is_existing_child:
+                    break
+        else:
             child_copy = copy.deepcopy(child_times)
             child_copy._parent = self
             child_copy._pos_in_parent = position_name
@@ -108,13 +108,13 @@ class Times(object):
         if aggregate_up:
             self._aggregate_up(child_times)
 
-    def _graft_existing(self, old_times, new_times):
-        self._absorb_dict(old_times, new_times, '_stamps')
-        self._absorb_dict(old_times, new_times, '_stamps_itrs')
+    def _graft_existing(self, old_child, new_child):
+        self._absorb_dict(old_child, new_child, '_stamps')
+        self._absorb_dict(old_child, new_child, '_stamps_itrs')
         for k in self._grabs_accum_keys:
-            old_times.__dict__[k] += new_times.__dict__[k]
-        for new_child in new_times._children:
-            old_times.graft(new_child, new_child._pos_in_parent, aggregate_up=False)
+            old_child.__dict__[k] += new_child.__dict__[k]
+        for grandchild in new_child._children:
+            old_child.graft(grandchild, grandchild._pos_in_parent, aggregate_up=False)
 
     def _absorb_dict(self, old_times, new_times, dict_name):
         old_dict = getattr(old_times, dict_name)
@@ -166,7 +166,7 @@ class Times(object):
     def report(self, include_itrs=True, include_diagnostics=True):
         if not self._stopped:
             raise RuntimeError("Cannot report an active Times structure, must be stopped.")
-        fmt_flt, fmt_gen = self._header_formats()
+        fmt_flt, fmt_gen, fmt_int = self._header_formats()
         rep = "\n---Timer Report---"
         if self._name:
             rep += fmt_gen.format('Timer:', repr(self._name))
@@ -175,10 +175,10 @@ class Times(object):
         if include_diagnostics:
             rep += fmt_flt.format('Self:', self._self)
             rep += fmt_flt.format('Self Agg.:', self._self_agg)
-            rep += fmt_gen.format('Calls:', self._calls)
-            rep += fmt_gen.format('Calls Agg.:', self._calls_agg)
-            rep += fmt_gen.format('Grabs Agg.:', self._grabs_agg)
-        rep += "\n\nStamps\n------"
+            rep += fmt_int.format('Calls:', self._calls)
+            rep += fmt_int.format('Calls Agg.:', self._calls_agg)
+            rep += fmt_int.format('Grabs Agg.:', self._grabs_agg)
+        rep += "\n\nIntervals\n---------"
         rep += self._report_stamps()
         if include_itrs:
             rep_itrs = ''
@@ -189,11 +189,11 @@ class Times(object):
         rep += "\n---End Report---\n"
         return rep
 
-    def _report_stamps(self, indent=0, prec=3):
+    def _report_stamps(self, indent=0, prec=4):
         s_rep = ''
-        fmt = "\n{0}{{:<{1}}}\t{0}{{:.{2}g}}".format(' ' * indent, 16 - indent, prec)
+        fmt = "\n{}{{:.<24}} {{:.{}g}}".format(' ' * indent, prec)
         for stamp in self._stamps_ordered:
-            s_rep += fmt.format(stamp, self._stamps[stamp])
+            s_rep += fmt.format("{} ".format(stamp), self._stamps[stamp])
             for child in self._children:
                 if child._pos_in_parent == stamp:
                     s_rep += child._report_stamps(indent=indent + 2)
@@ -202,12 +202,13 @@ class Times(object):
     def _report_itrs(self):
         rep_itrs = ''
         if self._stamps_itrs:
-            fmt_flt, fmt_gen = self._header_formats()
+            fmt_flt, fmt_gen, _ = self._header_formats()
             if self._name:
                 rep_itrs += fmt_gen.format('Timer:', repr(self._name))
             if self._parent is not None:
-                rep_itrs += fmt_gen.format('Parent:', repr(self._parent._name))
-                rep_itrs += fmt_gen.format('Pos in Parent:', repr(self._pos_in_parent))
+                rep_itrs += fmt_gen.format('Parent Timer:', repr(self._parent._name))
+                lin_str = self._fmt_lineage(self._get_lineage())
+                rep_itrs += fmt_gen.format('Stamp Lineage:', lin_str)
             rep_itrs += "\n\nIter."
             stamps_itrs_order = []
             is_key_active = []
@@ -215,7 +216,6 @@ class Times(object):
                 if k in self._stamps_itrs:
                     stamps_itrs_order += [k]
                     is_key_active += [True]
-            print is_key_active
             for k in stamps_itrs_order:
                 rep_itrs += "\t{:<12}".format(k)
             rep_itrs += "\n-----"
@@ -223,11 +223,16 @@ class Times(object):
                 rep_itrs += "\t------\t"
             itr = 0
             while any(is_key_active):
-                next_line = '\n{:<5}'.format(itr)
+                next_line = '\n{:<5,}'.format(itr)
                 for i, k in enumerate(stamps_itrs_order):
                     if is_key_active[i]:
                         try:
-                            next_line += "\t{:.3g}\t".format(self.stamps_itrs[k][itr])
+                            val = self._stamps_itrs[k][itr]
+                            if val < 0.001:
+                                prec = 2
+                            else:
+                                prec = 3
+                            next_line += "\t{{:.{}g}}\t".format(prec).format(val)
                         except IndexError:
                             next_line += "\t\t"
                             is_key_active[i] = False
@@ -245,13 +250,29 @@ class Times(object):
         fmt_name = "\n{{:<{}}}\t".format(width)
         fmt_flt = fmt_name + "{{:.{}g}}".format(prec)
         fmt_gen = fmt_name + "{}"
-        return fmt_flt, fmt_gen
+        fmt_int = fmt_name + "{:,}"
+        return fmt_flt, fmt_gen, fmt_int
+
+    def _get_lineage(self):
+        if self._pos_in_parent is not None:
+            return self._parent._get_lineage() + (repr(self._pos_in_parent), )
+        else:
+            return tuple()
+
+    def _fmt_lineage(self, lineage):
+        lin_str = ''
+        for link in lineage:
+            lin_str += "({})-->".format(link)
+        try:
+            return lin_str[:-3]
+        except IndexError:
+            pass
 
     def print_report(self, include_diagnostics=True):
         print self.report(include_diagnostics=include_diagnostics)
 
     def write_structure(self):
-        struct_str = '\n---Times Object Tree Structure---\n'
+        struct_str = '\n---Times Data Tree---\n'
         struct_str += self._write_structure()
         struct_str += "\n\n"
         return struct_str
@@ -314,8 +335,10 @@ class Timer(object):
         name = self._name
         save_itrs = self.save_itrs
         is_global = self._is_global
+        g_context = self._g_context
         self.__init__(name=name, save_itrs=save_itrs)
         self._is_global = is_global
+        self._g_context = g_context
 
     #
     # Methods operating on the Times data structure.
@@ -404,7 +427,7 @@ class Timer(object):
             raise RuntimeError("Timer already stopped.")
         if self._in_loop:
             raise RuntimeError("Cannot stop timer without exiting loop.")
-        for name in self._pos_used:
+        for name in copy.deepcopy(self._pos_used):
             if name in self._times._stamps_ordered:
                 self._pos_used.remove(name)
         if self._pos_used:
@@ -417,6 +440,26 @@ class Timer(object):
         self._times._calls_agg += self._times._calls
         self._active = False
         self._times._stopped = True
+        return t
+
+    def pause(self):
+        # UNFINISHED
+        t = timer()
+        self._times._total += t - self._last
+        self._active = False
+        self._times._calls += 1
+        self._last = timer()
+        self._self += self._last - t
+        return t
+
+    def resume(self):
+        # UNFINISHED
+        t = timer()
+        self._active = True
+        self._times._calls += 1
+        self._start = t
+        self._last = t
+        return t
 
     #
     # Loop methods.
@@ -506,6 +549,11 @@ class Timer(object):
         self.while_condition = True
         self._times._calls += 1
 
+    def break_for(self):
+        self._loop_end()
+        self._in_loop = False
+        self._times._calls += 1
+
     def set_while_false(self):
         self.while_condition = False
 
@@ -557,5 +605,4 @@ def get_g_timer(name, context='default_context'):
     try:
         return g_timers[context][name]
     except KeyError:
-        print "WARNING: Timer name ('{}') and/or context ('{}') not found.".format(name, context)
-        pass
+        print "WARNING: Timer name ({}) and/or context ({}) not found.".format(repr(name), repr(context))
