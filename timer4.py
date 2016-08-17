@@ -25,6 +25,8 @@ class Times(object):
         self.stamps_sum = 0.
         self.self_ = 0.
         self.self_agg = 0.
+        self.timer_calls = 0
+        self.timer_calls_agg = 0
         self.parent = None
         self.pos_in_parent = None
         self.children = list()
@@ -51,7 +53,7 @@ class Times(object):
     # Methods for linking / combining results from separate timers.
     #
 
-    def absorb(self, child_times, position_name, self_agg_up=True):
+    def absorb(self, child_times, position_name, aggregate_up=True):
         if not child_times.stopped:
             raise RuntimeError("Cannot absorb running times object, child must be stopped.")
         if position_name not in self.stamps:
@@ -67,8 +69,8 @@ class Times(object):
             child_copy.parent = self
             child_copy.pos_in_parent = position_name
             self.children.append(child_copy)
-        if self_agg_up:
-            self._absorb_self_agg(child_times.self_agg)
+        if aggregate_up:
+            self._aggregate_up(child_times)
 
     def _absorb_existing(self, old, new):
         self._merge_struct_dicts(old, new, 'stamps')
@@ -76,8 +78,10 @@ class Times(object):
         old.total += new.total
         old.self_ += new.self_
         old.self_agg += new.self_agg
+        old.timer_calls += new.timer_calls
+        old.timer_calls_agg += new.timer_calls_agg
         for new_child in new.children:
-            old.absorb(new_child, new_child.pos_in_parent, self_agg_up=False)
+            old.absorb(new_child, new_child.pos_in_parent, aggregate_up=False)
 
     def _merge_struct_dicts(self, old, new, attr):
         old_dict = getattr(old, attr)
@@ -88,10 +92,11 @@ class Times(object):
             else:
                 old_dict[k] = v
 
-    def _absorb_self_agg(self, agg_time):
-        self.self_agg += agg_time
+    def _aggregate_up(self, times):
+        self.self_agg += times.self_agg
+        self.timer_calls_agg += times.timer_calls_agg
         if self.parent is not None:
-            self.parent._absorb_self_agg(agg_time)
+            self.parent._aggregate_up(times)
 
     def merge(self, partner_times, copy_self=True):
         if not isinstance(partner_times, Times):
@@ -106,6 +111,8 @@ class Times(object):
         new.stamps_sum += partner_times.stamps_sum
         new.self_ += partner_times.self_
         new.self_agg += partner_times.self_agg
+        new.timer_calls += partner_times.timer_calls
+        new.timer_calls_agg += partner_times.timer_calls_agg
         for k, v in partner_times.stamps.iteritems():
             if k not in new.stamps:
                 new.stamps[k] = v
@@ -251,6 +258,7 @@ class Timer(object):
         if new_times:
             self.times = Times(self.name)
         self.while_condition = True
+        self.calls = 0
         self._in_loop = False
         self._active = True
         self._stamp_names = []
@@ -289,6 +297,7 @@ class Timer(object):
         elif isinstance(timing_obj, Times):
             self.times.aborb(timing_obj, position_name)
         if self._active:
+            self.calls += 1
             self.times.self_ += timer() - t
 
     def merge(self, timing_obj):
@@ -301,6 +310,7 @@ class Timer(object):
             raise TypeError("Valid Timer or Times object not recognized for merge.")
         self.times.merge(partner_times, copy_self=False)
         if self._active:
+            self.calls += 1
             self.times.self_ += timer() - t
 
     #
@@ -311,6 +321,7 @@ class Timer(object):
         if name in self._stamp_names or (name in self._itr_stamp_used and self._itr_stamp_used[name]):
             w = "Duplicate stamp name used: {}\n".format(repr(name))
             raise ValueError(w)
+        self.calls += 1
 
     def _stop(self):
         t = timer()
@@ -322,9 +333,12 @@ class Timer(object):
         self.times.self_agg += self.times.self_
         for k, v in self.times.stamps.iteritems():
             self.times.stamps_sum += v
+        self.calls += 1
         self._active = False
         self.times.stamps_order = self._stamp_names
         self.times.stopped = True
+        self.times.timer_calls += self.calls
+        self.times.timer_calls_agg += self.calls
 
     def stamp(self, name):
         """ Assigns the time since the previous stamp to this times key. """
@@ -334,6 +348,7 @@ class Timer(object):
         self._check_duplicate(name)
         self._stamp_names.append(name)
         self.times.stamps[name] = t - self._last
+        self.calls += 1
         self._last = timer()
         self.times.self_ += self._last - t
         return t
@@ -361,6 +376,7 @@ class Timer(object):
         if self.save_itrs:
             self.times.stamps_itrs[name].append(elapsed)
         self.times.stamps[name] += elapsed
+        self.calls += 1
         self._last = timer()
         self.times.self_ += self._last - t
         return t
@@ -379,6 +395,7 @@ class Timer(object):
             if self.save_itrs:
                 self.times.stamps_itrs[name] = []
         self._current_l_stamps = l_stamps_list
+        self.calls += 1
         self.times.self_ += timer() - t
         # self._itr_ended = True
 
@@ -393,6 +410,7 @@ class Timer(object):
         # self._itr_ended = False
         for k in self._itr_stamp_used:
             self._itr_stamp_used[k] = False
+        self.calls += 1
         self._last = timer()
         self.times.self_ += self._last - t
 
@@ -407,6 +425,7 @@ class Timer(object):
         for k in self._itr_stamp_used:
             self._itr_stamp_used[k] = False
         # self._itr_ended = True
+        self.calls += 1
         self.times.self_ += timer() - t
 
     def _exit_loop(self):
@@ -418,6 +437,7 @@ class Timer(object):
         self._in_loop = False
         self._stamp_names += self._current_l_stamps
         self._current_l_stamps[:] = []
+        self.calls += 1
         self.times.self_ += timer() - t
 
     def timed_for(self, loop_iterable, l_stamps_list):
@@ -429,6 +449,7 @@ class Timer(object):
             yield i
             self._loop_end()
         self._exit_loop()
+        self.calls += 1
 
     def timed_while(self, l_stamps_list):
         if not self._active:
@@ -440,3 +461,4 @@ class Timer(object):
             self._loop_end()
         self._exit_loop()
         self.while_condition = True
+        self.calls += 1
