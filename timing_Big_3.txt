@@ -1,0 +1,673 @@
+Description
+============================
+
+Env: Humanoid-v1
+Policy: GMLP (100, 50, 25)
+batch_size: 50000
+n_itr: 3
+Worker Affinity: [w_id + 2]
+KNL Config: Quadrant, Cache
+
+
+
+
+
+
+
+		MKL_NUM_THREADS: 1
+
+
+---Timer Report---
+Timer:      	'train'
+Total:      	276.22
+Stamps Sum: 	275.96
+Self:       	0.0031791
+Self Agg.:  	0.0065684
+Calls:      	32
+Calls Agg.: 	109
+Grabs Agg.: 	11
+
+Intervals
+---------
+init ................... 2.75
+sample ................. 45.65
+  get_params ............. 0.001514
+  sample_paths ........... 45.65
+    init_mgr ............... 0.216
+    collect ................ 22.85
+    get .................... 21.68
+    no_pool_collect ........ 0
+proc_samp .............. 16.96
+log_diagn .............. 0.4182
+opt_pol ................ 123.5
+  inputs ................. 0.000427
+  loss_kl ................ 10.03
+  optimize ............... 103.4
+  loss_after ............. 10.09
+snapshot ............... 0.06633
+opt_pol_0 .............. 86.58
+
+Loop Iterations
+---------------
+Timer:      	'train'
+
+Iter.	sample      	proc_samp   	log_diagn   	opt_pol     	snapshot    
+-----	------		------		------		------		------	
+0    	16		5.03		0.0879		0		0.0224	
+1    	15.1		6		0.164		61.9		0.0214	
+2    	14.5		5.94		0.166		61.6		0.0225	
+
+Timer:      	'run_collect'
+Parent Timer:	'obtain_samples'
+Stamp Lineage:	('sample')-->('sample_paths')
+
+Iter.	init_mgr    	collect     	get         	no_pool_collect
+-----	------		------		------		------	
+0    	0.0658		7.37		8.31		0	
+1    	0.0667		7.89		6.9		0	
+2    	0.0835		7.6		6.48		0	
+
+Timer:      	'opt_pol'
+Parent Timer:	'train'
+Stamp Lineage:	('opt_pol')
+
+Iter.	inputs      	loss_kl     	optimize    	loss_after  
+-----	------		------		------		------	
+0    	0.00023		5.03		51.8		5.08	
+1    	0.00019		5		51.6		5.01	
+
+---End Report---
+
+
+
+		MKL_NUM_THREADS: 2
+
+
+---Timer Report---
+Timer:      	'train'
+Total:      	263.26
+Stamps Sum: 	263
+Self:       	0.0031099
+Self Agg.:  	0.0068498
+Calls:      	32
+Calls Agg.: 	109
+Grabs Agg.: 	11
+
+Intervals
+---------
+init ................... 2.739
+sample ................. 52.04
+  get_params ............. 0.001815
+  sample_paths ........... 52.04
+    init_mgr ............... 0.2075
+    collect ................ 29.23
+    get .................... 21.73
+    no_pool_collect ........ 0
+proc_samp .............. 15.35
+log_diagn .............. 0.4589
+opt_pol ................ 112.7
+  inputs ................. 0.0003242
+  loss_kl ................ 9.492
+  optimize ............... 93.66
+  loss_after ............. 9.543
+snapshot ............... 0.06298
+opt_pol_0 .............. 79.65
+
+Loop Iterations
+---------------
+Timer:      	'train'
+
+Iter.	sample      	proc_samp   	log_diagn   	opt_pol     	snapshot    
+-----	------		------		------		------		------	
+0    	19.4		4.22		0.0862		0		0.0193	
+1    	17		5.46		0.175		56.4		0.0222	
+2    	15.6		5.67		0.198		56.3		0.0214	
+
+Timer:      	'run_collect'
+Parent Timer:	'obtain_samples'
+Stamp Lineage:	('sample')-->('sample_paths')
+
+Iter.	init_mgr    	collect     	get         	no_pool_collect
+-----	------		------		------		------	
+0    	0.0605		10.9		8.26		0	
+1    	0.0706		9.75		6.93		0	
+2    	0.0764		8.62		6.53		0	
+
+Timer:      	'opt_pol'
+Parent Timer:	'train'
+Stamp Lineage:	('opt_pol')
+
+Iter.	inputs      	loss_kl     	optimize    	loss_after  
+-----	------		------		------		------	
+0    	0.00016		4.77		46.9		4.78	
+1    	0.00016		4.72		46.8		4.76	
+
+---End Report---
+
+
+
+		MKL_NUM_THREADS: 4
+
+
+---Timer Report---
+Timer:      	'train'
+Total:      	258.83
+Stamps Sum: 	258.57
+Self:       	0.0029533
+Self Agg.:  	0.0060928
+Calls:      	32
+Calls Agg.: 	109
+Grabs Agg.: 	11
+
+Intervals
+---------
+init ................... 2.713
+sample ................. 53.56
+  get_params ............. 0.001564
+  sample_paths ........... 53.55
+    init_mgr ............... 0.2046
+    collect ................ 30.48
+    get .................... 22
+    no_pool_collect ........ 0
+proc_samp .............. 13.25
+log_diagn .............. 0.4672
+opt_pol ................ 110.1
+  inputs ................. 0.0003459
+  loss_kl ................ 9.492
+  optimize ............... 91.11
+  loss_after ............. 9.506
+snapshot ............... 0.06008
+opt_pol_0 .............. 78.41
+
+Loop Iterations
+---------------
+Timer:      	'train'
+
+Iter.	sample      	proc_samp   	log_diagn   	opt_pol     	snapshot    
+-----	------		------		------		------		------	
+0    	20		3.41		0.0884		0		0.0187	
+1    	17.3		4.97		0.188		55.3		0.021	
+2    	16.2		4.87		0.191		54.8		0.0203	
+
+Timer:      	'run_collect'
+Parent Timer:	'obtain_samples'
+Stamp Lineage:	('sample')-->('sample_paths')
+
+Iter.	init_mgr    	collect     	get         	no_pool_collect
+-----	------		------		------		------	
+0    	0.0653		11.2		8.47		0	
+1    	0.0658		10.1		6.89		0	
+2    	0.0734		9.18		6.64		0	
+
+Timer:      	'opt_pol'
+Parent Timer:	'train'
+Stamp Lineage:	('opt_pol')
+
+Iter.	inputs      	loss_kl     	optimize    	loss_after  
+-----	------		------		------		------	
+0    	0.00018		4.77		45.8		4.78	
+1    	0.00017		4.72		45.3		4.73	
+
+---End Report---
+
+
+
+		MKL_NUM_THREADS: 8
+
+
+---Timer Report---
+Timer:      	'train'
+Total:      	272.78
+Stamps Sum: 	272.49
+Self:       	0.0027115
+Self Agg.:  	0.0059073
+Calls:      	32
+Calls Agg.: 	109
+Grabs Agg.: 	11
+
+Intervals
+---------
+init ................... 2.855
+sample ................. 56.54
+  get_params ............. 0.001847
+  sample_paths ........... 56.54
+    init_mgr ............... 0.2051
+    collect ................ 35.24
+    get .................... 20.18
+    no_pool_collect ........ 0
+proc_samp .............. 12.92
+log_diagn .............. 0.479
+opt_pol ................ 117.4
+  inputs ................. 0.000329
+  loss_kl ................ 10.55
+  optimize ............... 96.26
+  loss_after ............. 10.58
+snapshot ............... 0.06129
+opt_pol_0 .............. 82.24
+
+Loop Iterations
+---------------
+Timer:      	'train'
+
+Iter.	sample      	proc_samp   	log_diagn   	opt_pol     	snapshot    
+-----	------		------		------		------		------	
+0    	21.1		3.31		0.118		0		0.0179	
+1    	18.2		4.7		0.173		58.6		0.0239	
+2    	17.2		4.91		0.188		58.8		0.0194	
+
+Timer:      	'run_collect'
+Parent Timer:	'obtain_samples'
+Stamp Lineage:	('sample')-->('sample_paths')
+
+Iter.	init_mgr    	collect     	get         	no_pool_collect
+-----	------		------		------		------	
+0    	0.0609		12.9		7.9		0	
+1    	0.0666		11.5		6.35		0	
+2    	0.0776		10.8		5.93		0	
+
+Timer:      	'opt_pol'
+Parent Timer:	'train'
+Stamp Lineage:	('opt_pol')
+
+Iter.	inputs      	loss_kl     	optimize    	loss_after  
+-----	------		------		------		------	
+0    	0.00018		5.26		48		5.29	
+1    	0.00015		5.29		48.2		5.29	
+
+---End Report---
+
+
+
+		MKL_NUM_THREADS: 12
+
+
+---Timer Report---
+Timer:      	'train'
+Total:      	264.84
+Stamps Sum: 	264.54
+Self:       	0.0028682
+Self Agg.:  	0.0060112
+Calls:      	32
+Calls Agg.: 	109
+Grabs Agg.: 	11
+
+Intervals
+---------
+init ................... 2.791
+sample ................. 62.9
+  get_params ............. 0.001748
+  sample_paths ........... 62.9
+    init_mgr ............... 0.2162
+    collect ................ 40.63
+    get .................... 21.14
+    no_pool_collect ........ 0
+proc_samp .............. 12.72
+log_diagn .............. 0.4715
+opt_pol ................ 107.8
+  inputs ................. 0.0003932
+  loss_kl ................ 9.746
+  optimize ............... 88.22
+  loss_after ............. 9.793
+snapshot ............... 0.06292
+opt_pol_0 .............. 77.83
+
+Loop Iterations
+---------------
+Timer:      	'train'
+
+Iter.	sample      	proc_samp   	log_diagn   	opt_pol     	snapshot    
+-----	------		------		------		------		------	
+0    	23		3.13		0.0859		0		0.0186	
+1    	20.5		4.86		0.189		54.2		0.023	
+2    	19.4		4.74		0.197		53.6		0.0213	
+
+Timer:      	'run_collect'
+Parent Timer:	'obtain_samples'
+Stamp Lineage:	('sample')-->('sample_paths')
+
+Iter.	init_mgr    	collect     	get         	no_pool_collect
+-----	------		------		------		------	
+0    	0.0625		14.6		8.16		0	
+1    	0.074		13.4		6.78		0	
+2    	0.0798		12.7		6.2		0	
+
+Timer:      	'opt_pol'
+Parent Timer:	'train'
+Stamp Lineage:	('opt_pol')
+
+Iter.	inputs      	loss_kl     	optimize    	loss_after  
+-----	------		------		------		------	
+0    	0.00024		4.9		44.3		4.92	
+1    	0.00016		4.85		43.9		4.88	
+
+---End Report---
+
+
+
+		MKL_NUM_THREADS: 16
+
+
+---Timer Report---
+Timer:      	'train'
+Total:      	263.28
+Stamps Sum: 	263.01
+Self:       	0.0035748
+Self Agg.:  	0.0070479
+Calls:      	32
+Calls Agg.: 	109
+Grabs Agg.: 	11
+
+Intervals
+---------
+init ................... 2.752
+sample ................. 65.54
+  get_params ............. 0.00194
+  sample_paths ........... 65.53
+    init_mgr ............... 0.2218
+    collect ................ 41.48
+    get .................... 22.91
+    no_pool_collect ........ 0
+proc_samp .............. 13.18
+log_diagn .............. 0.5064
+opt_pol ................ 104.3
+  inputs ................. 0.000303
+  loss_kl ................ 9.428
+  optimize ............... 85.46
+  loss_after ............. 9.44
+snapshot ............... 0.06119
+opt_pol_0 .............. 76.64
+
+Loop Iterations
+---------------
+Timer:      	'train'
+
+Iter.	sample      	proc_samp   	log_diagn   	opt_pol     	snapshot    
+-----	------		------		------		------		------	
+0    	24.2		3.32		0.0932		0		0.0202	
+1    	21.1		4.86		0.187		52.2		0.0201	
+2    	20.3		5		0.226		52.1		0.021	
+
+Timer:      	'run_collect'
+Parent Timer:	'obtain_samples'
+Stamp Lineage:	('sample')-->('sample_paths')
+
+Iter.	init_mgr    	collect     	get         	no_pool_collect
+-----	------		------		------		------	
+0    	0.0649		15.1		8.76		0	
+1    	0.0744		13.4		7.36		0	
+2    	0.0824		13		6.79		0	
+
+Timer:      	'opt_pol'
+Parent Timer:	'train'
+Stamp Lineage:	('opt_pol')
+
+Iter.	inputs      	loss_kl     	optimize    	loss_after  
+-----	------		------		------		------	
+0    	0.00016		4.71		42.8		4.73	
+1    	0.00014		4.72		42.7		4.71	
+
+---End Report---
+
+
+
+		MKL_NUM_THREADS: 24
+
+
+---Timer Report---
+Timer:      	'train'
+Total:      	257.88
+Stamps Sum: 	257.61
+Self:       	0.0032322
+Self Agg.:  	0.0066459
+Calls:      	32
+Calls Agg.: 	109
+Grabs Agg.: 	11
+
+Intervals
+---------
+init ................... 2.756
+sample ................. 65.56
+  get_params ............. 0.002135
+  sample_paths ........... 65.56
+    init_mgr ............... 0.2126
+    collect ................ 41.96
+    get .................... 22.45
+    no_pool_collect ........ 0
+proc_samp .............. 12.33
+log_diagn .............. 0.4307
+opt_pol ................ 102.1
+  inputs ................. 0.000421
+  loss_kl ................ 9.332
+  optimize ............... 83.37
+  loss_after ............. 9.36
+snapshot ............... 0.07192
+opt_pol_0 .............. 74.4
+
+Loop Iterations
+---------------
+Timer:      	'train'
+
+Iter.	sample      	proc_samp   	log_diagn   	opt_pol     	snapshot    
+-----	------		------		------		------		------	
+0    	23.8		2.9		0.0912		0		0.0171	
+1    	20.9		4.57		0.172		51.1		0.0353	
+2    	20.8		4.85		0.167		50.9		0.0195	
+
+Timer:      	'run_collect'
+Parent Timer:	'obtain_samples'
+Stamp Lineage:	('sample')-->('sample_paths')
+
+Iter.	init_mgr    	collect     	get         	no_pool_collect
+-----	------		------		------		------	
+0    	0.0648		15		8.47		0	
+1    	0.0703		13.4		7.15		0	
+2    	0.0775		13.5		6.83		0	
+
+Timer:      	'opt_pol'
+Parent Timer:	'train'
+Stamp Lineage:	('opt_pol')
+
+Iter.	inputs      	loss_kl     	optimize    	loss_after  
+-----	------		------		------		------	
+0    	0.00024		4.68		41.7		4.7	
+1    	0.00018		4.66		41.6		4.66	
+
+---End Report---
+
+
+
+		MKL_NUM_THREADS: 32
+
+
+---Timer Report---
+Timer:      	'train'
+Total:      	248.2
+Stamps Sum: 	247.9
+Self:       	0.0032175
+Self Agg.:  	0.0060518
+Calls:      	32
+Calls Agg.: 	109
+Grabs Agg.: 	11
+
+Intervals
+---------
+init ................... 2.787
+sample ................. 59.66
+  get_params ............. 0.002298
+  sample_paths ........... 59.66
+    init_mgr ............... 0.2167
+    collect ................ 38.2
+    get .................... 20.33
+    no_pool_collect ........ 0
+proc_samp .............. 11.97
+log_diagn .............. 0.4364
+opt_pol ................ 99.91
+  inputs ................. 0.0004869
+  loss_kl ................ 9.163
+  optimize ............... 81.57
+  loss_after ............. 9.177
+snapshot ............... 0.05959
+opt_pol_0 .............. 73.07
+
+Loop Iterations
+---------------
+Timer:      	'train'
+
+Iter.	sample      	proc_samp   	log_diagn   	opt_pol     	snapshot    
+-----	------		------		------		------		------	
+0    	22.5		2.78		0.0844		0		0.0175	
+1    	18.9		4.57		0.169		49.9		0.0208	
+2    	18.3		4.62		0.183		50		0.0212	
+
+Timer:      	'run_collect'
+Parent Timer:	'obtain_samples'
+Stamp Lineage:	('sample')-->('sample_paths')
+
+Iter.	init_mgr    	collect     	get         	no_pool_collect
+-----	------		------		------		------	
+0    	0.0666		14.2		7.96		0	
+1    	0.071		12.2		6.41		0	
+2    	0.079		11.8		5.96		0	
+
+Timer:      	'opt_pol'
+Parent Timer:	'train'
+Stamp Lineage:	('opt_pol')
+
+Iter.	inputs      	loss_kl     	optimize    	loss_after  
+-----	------		------		------		------	
+0    	0.00028		4.58		40.8		4.59	
+1    	0.0002		4.58		40.8		4.58	
+
+---End Report---
+
+
+
+		MKL_NUM_THREADS: 48
+
+
+---Timer Report---
+Timer:      	'train'
+Total:      	254.69
+Stamps Sum: 	254.4
+Self:       	0.0034549
+Self Agg.:  	0.0071242
+Calls:      	32
+Calls Agg.: 	109
+Grabs Agg.: 	11
+
+Intervals
+---------
+init ................... 2.774
+sample ................. 64.46
+  get_params ............. 0.001933
+  sample_paths ........... 64.45
+    init_mgr ............... 0.2146
+    collect ................ 40.91
+    get .................... 22.45
+    no_pool_collect ........ 0
+proc_samp .............. 12.3
+log_diagn .............. 0.4308
+opt_pol ................ 100.5
+  inputs ................. 0.00036
+  loss_kl ................ 9.328
+  optimize ............... 81.84
+  loss_after ............. 9.304
+snapshot ............... 0.061
+opt_pol_0 .............. 73.9
+
+Loop Iterations
+---------------
+Timer:      	'train'
+
+Iter.	sample      	proc_samp   	log_diagn   	opt_pol     	snapshot    
+-----	------		------		------		------		------	
+0    	23.6		2.9		0.0888		0		0.0193	
+1    	20.7		4.54		0.178		50.3		0.0217	
+2    	20.1		4.85		0.164		50.2		0.02	
+
+Timer:      	'run_collect'
+Parent Timer:	'obtain_samples'
+Stamp Lineage:	('sample')-->('sample_paths')
+
+Iter.	init_mgr    	collect     	get         	no_pool_collect
+-----	------		------		------		------	
+0    	0.0622		14.8		8.53		0	
+1    	0.0693		13.4		7.04		0	
+2    	0.0831		12.8		6.88		0	
+
+Timer:      	'opt_pol'
+Parent Timer:	'train'
+Stamp Lineage:	('opt_pol')
+
+Iter.	inputs      	loss_kl     	optimize    	loss_after  
+-----	------		------		------		------	
+0    	0.00017		4.67		40.9		4.66	
+1    	0.00019		4.66		40.9		4.64	
+
+---End Report---
+
+
+
+		MKL_NUM_THREADS: 64
+
+
+---Timer Report---
+Timer:      	'train'
+Total:      	272.1
+Stamps Sum: 	271.78
+Self:       	0.0030797
+Self Agg.:  	0.0068944
+Calls:      	32
+Calls Agg.: 	109
+Grabs Agg.: 	11
+
+Intervals
+---------
+init ................... 2.833
+sample ................. 66.38
+  get_params ............. 0.001436
+  sample_paths ........... 66.37
+    init_mgr ............... 0.2181
+    collect ................ 42.33
+    get .................... 22.91
+    no_pool_collect ........ 0
+proc_samp .............. 12.31
+log_diagn .............. 0.4508
+opt_pol ................ 111.3
+  inputs ................. 0.0004408
+  loss_kl ................ 10.39
+  optimize ............... 90.51
+  loss_after ............. 10.42
+snapshot ............... 0.07503
+opt_pol_0 .............. 78.41
+
+Loop Iterations
+---------------
+Timer:      	'train'
+
+Iter.	sample      	proc_samp   	log_diagn   	opt_pol     	snapshot    
+-----	------		------		------		------		------	
+0    	24.1		2.96		0.0925		0		0.02	
+1    	21.9		4.64		0.177		55.3		0.0206	
+2    	20.4		4.71		0.181		56		0.0345	
+
+Timer:      	'run_collect'
+Parent Timer:	'obtain_samples'
+Stamp Lineage:	('sample')-->('sample_paths')
+
+Iter.	init_mgr    	collect     	get         	no_pool_collect
+-----	------		------		------		------	
+0    	0.0646		15		8.73		0	
+1    	0.0742		14.2		7.3		0	
+2    	0.0792		13.1		6.88		0	
+
+Timer:      	'opt_pol'
+Parent Timer:	'train'
+Stamp Lineage:	('opt_pol')
+
+Iter.	inputs      	loss_kl     	optimize    	loss_after  
+-----	------		------		------		------	
+0    	0.0002		5.21		44.9		5.19	
+1    	0.00024		5.19		45.6		5.23	
+
+---End Report---
