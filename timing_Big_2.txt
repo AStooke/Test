@@ -1,0 +1,80 @@
+Description
+============================
+
+Env: Humanoid-v1
+Policy: GMLP (100, 50, 25)
+batch_size: 50000
+n_itr: 4
+Worker Affinity: [w_id + 2]
+KNL Config: Quadrant, Cache
+
+
+
+
+
+		Number of Samplers: 1
+
+
+---Timer Report---
+Timer:      	'train'
+Total:      	1619.6
+Stamps Sum: 	1619.6
+Self:       	0.0022359
+Self Agg.:  	0.0047841
+Calls:      	39
+Calls Agg.: 	138
+Grabs Agg.: 	15
+
+Intervals
+---------
+init ................... 0.6954
+sample ................. 1342
+  get_params ............. 0.003235
+  sample_paths ........... 1342
+    init_mgr ............... 0
+    collect ................ 0
+    get .................... 0
+    no_pool_collect ........ 1342
+proc_samp .............. 21
+log_diagn .............. 0.5394
+opt_pol ................ 176.4
+  inputs ................. 0.0003409
+  loss_kl ................ 14.15
+  optimize ............... 148
+  loss_after ............. 14.18
+snapshot ............... 0.06657
+opt_pol_0 .............. 79.34
+
+Loop Iterations
+---------------
+Timer:      	'train'
+
+Iter.	sample      	proc_samp   	log_diagn   	opt_pol     	snapshot    
+-----	------		------		------		------		------	
+0    	333		4.74		0.0765		0		0.0156	
+1    	333		5.56		0.154		58.9		0.0178	
+2    	337		5.38		0.154		58.7		0.0165	
+3    	339		5.33		0.154		58.8		0.0167	
+
+Timer:      	'run_collect'
+Parent Timer:	'obtain_samples'
+Stamp Lineage:	('sample')-->('sample_paths')
+
+Iter.	init_mgr    	collect     	get         	no_pool_collect
+-----	------		------		------		------	
+0    	0		0		0		333	
+1    	0		0		0		333	
+2    	0		0		0		337	
+3    	0		0		0		339	
+
+Timer:      	'opt_pol'
+Parent Timer:	'train'
+Stamp Lineage:	('opt_pol')
+
+Iter.	inputs      	loss_kl     	optimize    	loss_after  
+-----	------		------		------		------	
+0    	0.00011		4.73		49.4		4.76	
+1    	0.00011		4.72		49.3		4.72	
+2    	0.00011		4.7		49.4		4.7	
+
+---End Report---
