@@ -1,6 +1,7 @@
 from timeit import default_timer as timer
 import copy
 from operator import attrgetter
+from overrides import overrides
 
 """
 Timer object to sprinkle timers into code and easily add/remove/alter them to
@@ -295,19 +296,106 @@ class Times(object):
 
 
 #
-# Main class for recording timing, either directly or as a context manager.
+# Placeholder class with same signature as main Timer class, for disabled timers.
 #
 
 
-class Timer(object):
+class EmptyTimer(object):
 
-    _inactive_error = "Can't use stopped timer (can clear() to reset)."
-    _no_loop_error = "Must be in timed loop to use loop methods."
+    def __init__(self, *args, **kwargs):
+        self.while_condition = True
+        self.save_itrs = False
+        self._disabled = True
+
+    disabled = property(attrgetter("_disabled"))
+    name = property(lambda _: None)
+    times = property(lambda _: None)
+    is_global = property(lambda _: None)
+    g_context = property(lambda _: None)
+    in_loop = property(lambda _: None)
+    start = property(lambda _: None)
+    last = property(lambda _: None)
+
+    def clear(self):
+        self.__init__()
+
+    def report(self, *args, **kwargs):
+        pass
+
+    def print_report(self, *args, **kwargs):
+        pass
+
+    def write_structure(self):
+        pass
+
+    def print_structure(self):
+        pass
+
+    def absorb(self, *args, **kwargs):
+        pass
+
+    def graft(self, *args, **kwargs):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self):
+        pass
+
+    def stamp(self, *args, **kwargs):
+        pass
+
+    def stop(self):
+        pass
+
+    def pause(self):
+        pass
+
+    def resume(self):
+        pass
+
+    def b_stamp(self, *args, **kwargs):
+        pass
+
+    def l_stamp(self, *args, **kwargs):
+        pass
+
+    def timed_for(self, loop_iterable, *args, **kwargs):
+        for i in loop_iterable:
+            yield i
+
+    def timed_while(self, *args, **kwargs):
+        while self.while_condtion:
+            yield None
+        self.while_condition = True
+
+    def break_for(self):
+        pass
+
+    def set_while_false(self):
+        self.while_condition = False
+
+    def set_while_true(self):
+        self.while_condition = True
+
+
+#
+# Main class for timing.
+#
+
+
+class Timer(EmptyTimer):
+
+    _error_msgs = {'inactive': "Can't use stopped or paused timer (can clear() to reset or resume() from pause).",
+                   'no_loop': "Must be in timed loop to use loop methods."
+                   }
 
     def __init__(self, name='', save_itrs=True):
         self.save_itrs = save_itrs
         self.while_condition = True
 
+        self._disabled = False
         self._name = name
         if hasattr(self, "_times"):
             self._times.clear()
@@ -317,12 +405,15 @@ class Timer(object):
         self._g_context = None
         self._in_loop = False
         self._active = True
+        self._tmp_self = 0.  # Finish using this.
+        self._tmp_calls = 0
         self._start = timer()
         self._last = self._start
 
         self._itr_stamp_used = dict()
         self._pos_used = []
 
+    # all overrides
     name = property(attrgetter("_name"))
     times = property(attrgetter("_times"))
     is_global = property(attrgetter("_is_global"))
@@ -331,6 +422,7 @@ class Timer(object):
     start = property(attrgetter("_start"))
     last = property(attrgetter("_last"))
 
+    @overrides
     def clear(self):
         name = self._name
         save_itrs = self.save_itrs
@@ -344,53 +436,94 @@ class Timer(object):
     # Methods operating on the Times data structure.
     #
 
+    @overrides
     def report(self, **kwargs):
+        t = timer()
         if self._active:
-            raise RuntimeError("Can't report an active timer, must stop it first.")
-        return self._times.report(**kwargs)
+            self._tmp_calls += 1
+            self._dump_tmp_times(t)
+            rep = self._times.report(**kwargs)
+            elapsed = timer() - t
+            self._tmp_self += elapsed
+            self._start += elapsed
+            return rep
+        else:
+            return self._times.report(**kwargs)
 
+    @overrides
     def print_report(self, **kwargs):
-        self._times.print_report(**kwargs)
+        t = timer()
+        if self._active:
+            self._tmp_calls += 1
+            self._dump_tmp_times(t)
+            self._times.print_report(**kwargs)
+            elapsed = timer() - t
+            self._tmp_self += elapsed
+            self._start += elapsed
+        else:
+            self._times.print_report(**kwargs)
 
+    @overrides
     def write_structure(self):
         return self._times.write_structure()
 
+    @overrides
     def print_structure(self):
         self._times.print_structure()
 
     def _prep_timer_obj_arg(self, timer_arg):
         if self._is_global:
             if isinstance(timer_arg, Timer):
+                if timer_arg._disabled:
+                    return None
                 if not timer_arg._is_global:
                     raise ValueError("Global timer can only graft other global g_timers.")
                 if timer_arg._name not in g_timers[self._g_context]:
                     raise ValueError("Cannot graft: timer is global but not found in same context.")
             elif timer_arg in g_timers[self._g_context]:
                 timer_arg = g_timers[self._g_context][timer_arg]
+                if timer_arg._disabled:
+                    return None
             else:
-                raise ValueError("Invalid timer object or name not found in same context.")
+                for context in g_timers:
+                    if timer_arg in context:
+                        if timer_arg._disabled:
+                            return None
+                else:
+                    raise ValueError("Invalid timer object or name not found in same context.")
         else:
-            if not isinstance(timer_arg, Timer):
+            if not isinstance(timer_arg, EmptyTimer):
                 raise TypeError("Valid timer object not recognized for graft.")
+            if timer_arg._disabled:
+                return None
         if timer_arg._active:
             timer_arg.stop()
         return timer_arg
 
-    def _times_data_methods(self, times_method, child_timer, **kwargs):
+    def _times_data_methods(self, times_method, timer_arg, **kwargs):
         t = timer()
-        child_timer = self._prep_timer_obj_arg(child_timer)
-        times_method(child_timer._times, **kwargs)
-        if self._active:
-            self._times._self += timer() - t
+        target_timer = self._prep_timer_obj_arg(timer_arg)
+        if target_timer is not None:
+            target_disabled = False
+            times_method(target_timer._times, **kwargs)
+            if self._active:
+                self._times._self += timer() - t
+        else:
+            target_disabled = True
+        return target_disabled
 
+    @overrides
     def absorb(self, partner_timer):
-        self._times_data_methods(self._times.absorb, partner_timer, copy_self=False)
-        self._stamp_names += partner_timer._stamp_names
+        partner_disabled = self._times_data_methods(self._times.absorb, partner_timer, copy_self=False)
+        if not partner_disabled:
+            self._stamp_names += partner_timer._stamp_names
 
+    @overrides
     def graft(self, child_timer, position_name):
-        if position_name not in self._pos_used:
-            self._pos_used += [position_name]
-        self._times_data_methods(self._times.graft, child_timer, position_name=position_name)
+        child_disabled = self._times_data_methods(self._times.graft, child_timer, position_name=position_name)
+        if not child_disabled:
+            if position_name not in self._pos_used:
+                self._pos_used += [position_name]
 
     #
     # Timing methods.
@@ -404,27 +537,64 @@ class Timer(object):
 
     def _check_duplicate(self, name):
         if name in self._times._stamps_ordered:
-            w = "Duplicate stamp name used: {}\n".format(repr(name))
-            raise ValueError(w)
+            raise ValueError("Duplicate stamp name used: {}\n".format(repr(name)))
         self._times._calls += 1
 
+    @overrides
+    def register_stamps(self, stamp_list):
+        if not isinstance(stamp_list, (list, tuple)):
+            raise TypeError("Expect a list or tuple for 'stamp_list' argument.")
+        self._reg_stamps += list(stamp_list)
+
+    @overrides
     def stamp(self, name):
         """ Assigns the time since the previous stamp to the <name> key. """
         t = timer()
         if not self._active:
-            raise RuntimeError(Timer._inactive_error)
+            raise RuntimeError(Timer._error_msgs['inactive'])
         self._check_duplicate(name)
         self._times._stamps_ordered.append(name)
-        self._times._stamps[name] = t - self._last
-        self._times._calls += 1
+        elapsed = t - self._last
+        self._times._stamps[name] = elapsed
+        self._times._stamps_sum += elapsed
+        self._tmp_calls += 1
         self._last = timer()
-        self._times._self += self._last - t
+        self._tmp_self += self._last - t
         return t
 
+    @overrides
+    def d_stamp(self, name):
+        t = timer()
+        if not self._active:
+            raise RuntimeError(Timer._error_msgs['inactive'])
+        elapsed = t - self._last
+        if name not in self._times._stamps_ordered:
+            self._times._stamps_ordered.append(name)
+            self._times._stamps[name] = elapsed
+        else:
+            self._times._stamps[name] += elapsed
+        self._times._stamps_sum += elapsed
+        self._tmp_calls += 1
+        self._last = timer()
+        self._tmp_self += self._last - t
+        return t
+
+    def _dump_tmp_times(self, total_mark):
+        t = timer()
+        self._times._total += total_mark - self._start - self._tmp_self
+        self._times._self += self._tmp_self
+        self._times._self_agg += self._tmp_self
+        self._times._calls += self._tmp_calls + 1
+        self._times._calls_agg += self._tmp_calls + 1
+        self._tmp_calls = 0
+        self._start = timer()
+        self._tmp_self = self._start - t
+
+    @overrides
     def stop(self):
         t = timer()
         if not self._active:
-            raise RuntimeError("Timer already stopped.")
+            raise RuntimeError("Timer already stopped or paused.")
         if self._in_loop:
             raise RuntimeError("Cannot stop timer without exiting loop.")
         for name in copy.deepcopy(self._pos_used):
@@ -432,78 +602,97 @@ class Timer(object):
                 self._pos_used.remove(name)
         if self._pos_used:
             raise RuntimeError("Children awaiting non-existent graft positions (stamps): {}".format(self._pos_used))
-        self._times._total += t - self._start - self._times._self
-        self._times._self_agg += self._times._self
-        for k, v in self._times._stamps.iteritems():
-            self._times._stamps_sum += v
-        self._times._calls += 1
-        self._times._calls_agg += self._times._calls
+        self._tmp_calls += 1
+        self._dump_tmp_times(t)
+        for name in self._reg_stamps:
+            if name not in self._times._stamps_ordered:
+                self._times._stamps_ordered.append(name)
+                self._times._stamps[name] = 0.
         self._active = False
         self._times._stopped = True
         return t
 
+    @overrides
     def pause(self):
-        # UNFINISHED
         t = timer()
         self._times._total += t - self._last
         self._active = False
-        self._times._calls += 1
-        self._last = timer()
-        self._self += self._last - t
+        self._tmp_calls += 1
+        self._tmp_self += timer() - t
         return t
 
+    @overrides
     def resume(self):
-        # UNFINISHED
         t = timer()
         self._active = True
-        self._times._calls += 1
+        self._tmp_calls += 1
         self._start = t
         self._last = t
         return t
+
+    @overrides
+    def b_stamp(self, *args, **kwargs):
+        self._times._calls += 1
+        self._last = timer()
+        return self._last
 
     #
     # Loop methods.
     #
 
+    @overrides
     def l_stamp(self, name):
         """ Assigns the time since the previous stamp to this times key. """
         t = timer()
         if not self._active:
-            raise RuntimeError(Timer._inactive_error)
+            raise RuntimeError(Timer._error_msgs['inactive'])
         if not self._in_loop:
-            raise RuntimeError(Timer._no_loop_error)
-        if name not in self._current_l_stamps:
-            raise ValueError("Loop stamp name not registered at loop entrance.")
-        if self._itr_stamp_used[name]:
-            raise RuntimeError("Loop stamp name used more than once within one iteration.")
-        self._itr_stamp_used[name] = True
+            raise RuntimeError(Timer._error_msgs['no_loop'])
         elapsed = t - self._last
-        if self.save_itrs:
-            self._times._stamps_itrs[name].append(elapsed)
-        self._times._stamps[name] += elapsed
-        self._times._calls += 1
-        self._last = timer()
-        self._times._self += self._last - t
-        return t
-
-    def _enter_loop(self, l_stamps_list):
-        t = timer()
-        if not self._active:
-            raise RuntimeError(Timer._inactive_error)
-        if self._in_loop:
-            raise RuntimeError("Single timer does not support nested loops, use another timer.")
-        if not isinstance(l_stamps_list, (list, tuple)):
-            raise TypeError("Expected list or tuple types for arg 'l_stamps_list'.")
-        self._in_loop = True
-        self._itr_stamp_used.clear()
-        self._current_l_stamps = l_stamps_list
-        for name in l_stamps_list:
+        if name not in self._current_l_stamps:
             self._check_duplicate(name)
-            self._times._stamps_ordered += [name]
-            self._itr_stamp_used[name] = False
+            self._current_l_stamps.append(name)
+            self._times._stamps_ordered.append(name)
+            self._itr_stamp_used = False
             self._times._stamps[name] = 0.
             if self.save_itrs:
                 self._times._stamps_itrs[name] = []
+        if self._itr_stamp_used[name]:
+            raise RuntimeError("Loop stamp name used more than once within one iteration.")
+        self._times._stamps[name] += elapsed
+        self._times._stamps_sum += elapsed
+        if self.save_itrs:
+            self._times._stamps_itrs[name].append(elapsed)
+        self._itr_stamp_used[name] = True
+        self._tmp_calls += 1
+        self._last = timer()
+        self._tmp_self += self._last - t
+        return t
+
+    def _enter_loop(self, registered_stamps=None):
+        
+####### FINISH STAMP REGISTERING
+
+        t = timer()
+        if not self._active:
+            raise RuntimeError(Timer._error_msgs['inactive'])
+        if self._in_loop:
+            raise RuntimeError("Single timer does not support nested loops, use another timer.")
+        self._in_loop = True
+        self._itr_stamp_used.clear()
+        if registered_stamps is not None:
+            if not isinstance(registered_stamps, (list, tuple)):
+                raise TypeError("Expected list or tuple types for arg 'registered_stamps'.")
+            self._reg_stamps += registered_stamps
+            self._l_reg_stamps = registered_stamps
+            self._l_stamps = registered_stamps
+            for name in registered_stamps:
+                self._check_duplicate(name)
+                self._times._stamps_ordered += [name]
+                self._itr_stamp_used[name] = False
+                self._times._stamps[name] = 0.
+                if self.save_itrs:
+                    self._times._stamps_itrs[name] = []
         self._times._calls += 1
         self._times._self += timer() - t
 
@@ -518,9 +707,9 @@ class Timer(object):
     def _loop_end(self):
         t = timer()
         if self.save_itrs:
-            for k, v in self._itr_stamp_used.iteritems():
-                if not v:
-                    self._times._stamps_itrs[k].append(0.)
+            for name in self._current_reg_stamps:
+                if not self._itr_stamp_used[name]:
+                    self._times._stamps_itrs[name].append(0.)
         self._times._calls += 1
         self._times._self += timer() - t
 
@@ -530,6 +719,7 @@ class Timer(object):
     #     self._times._calls += 1
     #     self._times._self += timer() - t
 
+    @overrides
     def timed_for(self, loop_iterable, l_stamps_list):
         self._enter_loop(l_stamps_list)
         for i in loop_iterable:
@@ -539,6 +729,7 @@ class Timer(object):
         self._in_loop = False
         self._times._calls += 1
 
+    @overrides
     def timed_while(self, l_stamps_list):
         self._enter_loop(l_stamps_list)
         while self.while_condition:
@@ -549,16 +740,11 @@ class Timer(object):
         self.while_condition = True
         self._times._calls += 1
 
+    @overrides
     def break_for(self):
         self._loop_end()
         self._in_loop = False
         self._times._calls += 1
-
-    def set_while_false(self):
-        self.while_condition = False
-
-    def set_while_true(self):
-        self.while_condition = True
 
 
 #
@@ -567,18 +753,7 @@ class Timer(object):
 
 
 g_timers = dict()
-
-
-def G_Timer(names, save_itrs=True, context='default_context'):
-    if not isinstance(names, (list, tuple)):
-        return _make_g_timer(names, save_itrs, context)
-    if len(names) == 1:
-        return _make_g_timer(names[0], save_itrs, context)
-    else:
-        ret = ()
-        for name in names:
-            ret += (_make_g_timer(name, save_itrs, context), )
-        return ret
+timers_disabled = False
 
 
 def _make_g_timer(name, save_itrs, context):
@@ -593,7 +768,33 @@ def _make_g_timer(name, save_itrs, context):
     return new_timer
 
 
-def clear_g_context(context=None):
+def _make_empty_timer(name, save_itrs, context):
+    new_timer = EmptyTimer()
+    g_timers[context][name] = new_timer
+    return new_timer
+
+
+def G_Timer(names, save_itrs=True, context='default_context', disable=None):
+    if disable is not None:
+        disable = bool(disable)
+    else:
+        disable = bool(timers_disabled)
+    if disable:
+        timer_make_func = _make_empty_timer
+    else:
+        timer_make_func = _make_g_timer
+    if not isinstance(names, (list, tuple)):
+        return timer_make_func(names, save_itrs, context)
+    if len(names) == 1:
+        return timer_make_func(names[0], save_itrs, context)
+    else:
+        ret = ()
+        for name in names:
+            ret += (timer_make_func(name, save_itrs, context), )
+        return ret
+
+
+def clear_context(context=None):
     if context is not None:
         if context in g_timers:
             g_timers[context].clear()
@@ -601,8 +802,29 @@ def clear_g_context(context=None):
         g_timers.clear()
 
 
-def get_g_timer(name, context='default_context'):
+def clear_timers(context=None):
+    if context is not None:
+        if context in g_timers:
+            _clear_in_context(context)
+    else:
+        for context in g_timers:
+            _clear_in_context(context)
+
+
+def _clear_in_context(context):
+    for k, t in g_timers[context].iteritems():
+        t.clear()
+
+
+def get_timer(name, context='default_context'):
     try:
         return g_timers[context][name]
     except KeyError:
-        print "WARNING: Timer name ({}) and/or context ({}) not found.".format(repr(name), repr(context))
+        print "WARNING: Timer name ({}) and/or context ({}) not found.\n".format(repr(name), repr(context))
+
+
+def get_context(context='default_context'):
+    try:
+        return g_timers[context]
+    except KeyError:
+        print "WARNING: Timer context {} not found.\n".format(repr(context))

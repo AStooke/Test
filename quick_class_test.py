@@ -3,6 +3,8 @@ class Dummy(object):
     def __init__(self):
         self.star = [7, 8]
 
+    name = property(lambda x: None)
+
     def increment_star(self):
         self.star += 1
 
@@ -12,6 +14,7 @@ class Dummy(object):
 
 
 dumdum = Dummy()
+print dumdum.name
 # print "star: ", dumdum.star
 # print "return_Star: ", dumdum.return_star()
 # t = dumdum.return_star()
