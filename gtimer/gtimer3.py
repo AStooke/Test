@@ -525,7 +525,7 @@ class Timer(EmptyTimer):
         self._reset_self_data()
 
     def _check_duplicate(self, name):
-        if name in self._times._stamps_ordered:
+        if name in self._tmp_times._stamps_ordered:
             raise ValueError("Duplicate stamp name used: {}\n".format(repr(name)))
         self._times._calls += 1
 
@@ -546,11 +546,9 @@ class Timer(EmptyTimer):
         elapsed = t - self._last_t
         if not allow_disjoint:
             self._check_duplicate(name)
+        if name not in self._tmp_times._stamps_ordered:
             self._tmp_times._stamps_ordered.append(name)
             self._tmp_times._stamps[name] = elapsed
-        elif name not in self._tmp_times._stamps_ordered:
-            self._tmp_times._stamps_ordered.append(name)
-            self._tmp_times._stamps[name]
         else:
             self._tmp_times._stamps[name] += elapsed
         self._tmp_times._stamps_sum += elapsed
