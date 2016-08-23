@@ -9,6 +9,12 @@ import globalholder as g
 
 # Functions that I want the user to use.
 from timerfuncs import *
+import reportfuncs as rpt
+
+
+def write_report():
+    raise NotImplementedError
+
 
 g.create_next_timer('root')
 

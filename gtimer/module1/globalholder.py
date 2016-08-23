@@ -9,14 +9,11 @@ loop_stack = FocusedStack(Loop)
 
 
 #
-# Shortcuts
+# Shortcut variables and shortcut functions.
 #
 
-# global tf
 tf = None  # timer_stack.focus: 'Timer in Focus'
 rf = None  # timer_stack.focus.times: 'Times (Record) in Focus'
-
-# global lf
 lf = None  # loop_stack.focus: 'Loop in Focus'
 
 
@@ -37,14 +34,17 @@ def create_next_timer(name):
     if tf is not None:
         if name in rf.children_awaiting:
             dump_location = rf.children_awaiting[name]
+            first_dump = False
         else:
             dump_location = Times(name=name, parent=rf)
             rf.children_awaiting[name] = dump_location
+            first_dump = True
     else:
+        first_dump = True
         dump_location = None
-    tf = timer_stack.create_next(name)
+    tf = timer_stack.create_next(name=name, first_dump=first_dump)
     rf = tf.times
-    rf.where_to_dump = dump_location
+    rf.dump_location = dump_location
 
 
 def remove_last_timer():

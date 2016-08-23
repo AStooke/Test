@@ -28,6 +28,11 @@ class Loop(object):
 
 class Times(object):
 
+    """
+    These might be exposed to user later, if they want to explore
+    the structure...maybe should write-protect.
+    """
+
     def __init__(self, name=None, parent=None):
         self.name = name
         self.total = 0.
@@ -37,7 +42,7 @@ class Times(object):
         self.pos_in_parent = None  # will refer to a stamp name.
         self.children = dict()  # key: position in self, value: list of Times instances.
         self.children_awaiting = dict()  # key: name of child, value: a Times instance.
-        self.where_to_dump = None  # will refer to another Times instance.
+        self.dump_location = None  # will refer to another Times instance.
 
 
 # class Loop(object):

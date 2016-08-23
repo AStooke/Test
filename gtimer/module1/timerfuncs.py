@@ -8,12 +8,22 @@ import timesfuncs
 UNASSIGNED = 'UNASSIGNED'
 
 
+def start():
+    if g.tf.stamps:
+        raise RuntimeError("Already have stamps, can't start again.")
+    if g.rf.children_awaiting:
+        raise RuntimeError("Already have lower level timers, can't start again.")
+    t = timer()
+    g.tf.start_t = t
+    g.tf.last_t = t
+
+
 def stamp(name):
     t = timer()
     if name in g.rf.stamps:
         raise ValueError("Duplicate name: {}".format(repr(name)))
-    if g.rf.children_awaiting:  # Only to prevent going into new function.
-        timesfuncs.assign_children(g.rf, name)
+    if g.rf.children_awaiting:
+        timesfuncs.assign_children(name)
     g.rf.stamps[name] = t - g.tf.last_t
     g.tf.last_t = t
     return t
@@ -25,13 +35,14 @@ def stop(name=None):
     else:
         t = timer()
         if g.rf.children_awaiting:
-            timesfuncs.l_assign_children(g.rf, UNASSIGNED)
+            timesfuncs.l_assign_children(UNASSIGNED)
     g.rf.total = t - g.tf.start_t
-    timesfuncs.dump_times(g.rf)
+    timesfuncs.dump_times()
 
 
 def l_stamp(name):
     t = timer()
+    # Still need to check whether current timer is in loop.
     if name not in g.lf.stamps:
         if name in g.rf.stamps:
             raise ValueError("Duplicate name: {}".format(repr(name)))
@@ -42,7 +53,7 @@ def l_stamp(name):
     if g.lf.itr_stamp_used[name]:
         raise RuntimeError("Loop stamp name twice in one itr: {}".format(repr(name)))
     if g.rf.children_awaiting:
-        timesfuncs.l_assign_children(g.rf, name)
+        timesfuncs.l_assign_children(name)
     g.lf.itr_stamp_used[name] = True
     elapsed = t - g.tf.last_t
     g.rf.stamps[name] += elapsed
@@ -54,7 +65,7 @@ def l_stamp(name):
 def _enter_loop(name=None):
     g.tf.last_t = timer()
     if g.rf.children_awaiting:
-        timesfuncs.l_assign_children(g.rf, UNASSIGNED)
+        timesfuncs.l_assign_children(UNASSIGNED)
     g.create_next_loop(name)
     if name is not None:
         if name in g.rf.stamps:
@@ -73,7 +84,7 @@ def _loop_end():
     t = timer()
     g.tf.last_t = t
     if g.rf.children_awaiting:
-        timesfuncs.l_assign_children(g.rf, UNASSIGNED)
+        timesfuncs.l_assign_children(UNASSIGNED)
     if g.lf.name is not None:
         g.focus_backward_timer()
         g.rf.stamps[g.lf.name] += t - g.tf.last_t
@@ -85,7 +96,7 @@ def _exit_loop():
     if g.lf.name is not None:
         # Then, currently in a timer made just for this loop, stop it.
         g.tf.stop()
-        g.remove_last_timer()  # timer data is saved inside this function.
+        g.remove_last_timer()
     g.remove_last_loop()
 
 
