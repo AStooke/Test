@@ -2,7 +2,7 @@
 
 # Yeah make a data structure here.
 from focusedstack import FocusedStack
-from timerclass import Timer, Loop
+from timerclass import Timer, Loop, Times
 
 timer_stack = FocusedStack(Timer)
 loop_stack = FocusedStack(Loop)
@@ -14,12 +14,14 @@ loop_stack = FocusedStack(Loop)
 
 # global tf
 tf = None  # timer_stack.focus: 'Timer in Focus'
+rf = None  # timer_stack.focus.times: 'Times (Record) in Focus'
 
 # global lf
 lf = None  # loop_stack.focus: 'Loop in Focus'
 
 
 # TO DO: Automate the making of these shortcuts.
+#
 # def focus_shortcut_builder(focus_var, append_name, heap, method, *args, **kwargs):
 #     def shortcut(*args, **kwargs):
 #         heap.method(*args, **kwargs)
@@ -27,75 +29,84 @@ lf = None  # loop_stack.focus: 'Loop in Focus'
 #         focus_var = heap.focus
 #     shortcut.__name__ = method.__name__ + append_name
 #     return shortcut
+#
 
 
 def create_next_timer(name):
-    timer_stack.create_next(name)
-    global tf
-    tf = timer_stack.focus
+    global tf, rf
+    if tf is not None:
+        if name in rf.children_awaiting:
+            dump_location = rf.children_awaiting[name]
+        else:
+            dump_location = Times(name=name, parent=rf)
+            rf.children_awaiting[name] = dump_location
+    else:
+        dump_location = None
+    tf = timer_stack.create_next(name)
+    rf = tf.times
+    rf.where_to_dump = dump_location
 
 
 def remove_last_timer():
-    timer_stack.remove_last()
-    global tf
-    tf = timer_stack.focus
+    global tf, rf
+    tf = timer_stack.remove_last()
+    if tf is not None:
+        rf = tf.times
 
 
 def focus_backward_timer():
-    timer_stack.focus_backward()
-    global tf
-    tf = timer_stack.focus
+    global tf, rf
+    tf = timer_stack.focus_backward()
+    if tf is not None:
+        rf = tf.times
 
 
 def focus_forward_timer():
-    timer_stack.focus_forward()
-    global tf
-    tf = timer_stack.focus
+    global tf, rf
+    tf = timer_stack.focus_forward()
+    if tf is not None:
+        rf = tf.times
 
 
 def focus_last_timer():
-    timer_stack.focus_last()
-    global tf
-    tf = timer_stack.focus
+    global tf, rf
+    tf = timer_stack.focus_last()
+    if tf is not None:
+        rf = tf.times
 
 
 def focus_root_timer():
-    timer_stack.focus_root()
-    global tf
-    tf = timer_stack.focus
+    global tf, rf
+    tf = timer_stack.focus_root()
+    if tf is not None:
+        rf = tf.times
 
 
 def create_next_loop(name):
-    loop_stack.create_next(name)
     global lf
-    lf = loop_stack.focus
+    lf = loop_stack.create_next(name)
 
 
 def remove_last_loop():
-    loop_stack.remove_last()
     global lf
-    lf = loop_stack.focus
+    lf = loop_stack.remove_last()
 
 
 def focus_backward_loop():
-    loop_stack.focus_backward()
     global lf
-    lf = loop_stack.focus
+    lf = loop_stack.focus_backward()
 
 
 def focus_forward_loop():
-    loop_stack.focus_forward()
     global lf
-    lf = loop_stack.focus
+    lf = loop_stack.focus_forward()
 
 
 def focus_last_loop():
-    loop_stack.focus_last()
     global lf
-    lf = loop_stack.focus
+    lf = loop_stack.focus_last()
 
 
 def focus_root_loop():
-    loop_stack.focus_root()
     global lf
-    lf = loop_stack.focus
+    lf = loop_stack.focus_root()

@@ -3,28 +3,37 @@
 #
 from timeit import default_timer as timer
 import globalholder as g
+import timesfuncs
+
+UNASSIGNED = 'UNASSIGNED'
 
 
 def stamp(name):
     t = timer()
-    if name in g.tf.times.stamps:
+    if name in g.rf.stamps:
         raise ValueError("Duplicate name: {}".format(repr(name)))
-    g.tf.times.stamps[name] = t - g.tf.last_t
+    if g.rf.children_awaiting:  # Only to prevent going into new function.
+        timesfuncs.assign_children(g.rf, name)
+    g.rf.stamps[name] = t - g.tf.last_t
     g.tf.last_t = t
     return t
 
 
 def stop(name=None):
     if name is not None:
-        stamp(name)
-    t = timer()
-    g.tf.times.total = t - g.tf.start_t
+        t = stamp(name)
+    else:
+        t = timer()
+        if g.rf.children_awaiting:
+            timesfuncs.l_assign_children(g.rf, UNASSIGNED)
+    g.rf.total = t - g.tf.start_t
+    timesfuncs.dump_times(g.rf)
 
 
 def l_stamp(name):
     t = timer()
     if name not in g.lf.stamps:
-        if name in g.tf.times.stamps:
+        if name in g.rf.stamps:
             raise ValueError("Duplicate name: {}".format(repr(name)))
         g.lf.stamps.append(name)
         g.lf.itr_stamp_used[name] = False
@@ -32,22 +41,26 @@ def l_stamp(name):
         g.tf.stamps_itrs[name] = []
     if g.lf.itr_stamp_used[name]:
         raise RuntimeError("Loop stamp name twice in one itr: {}".format(repr(name)))
+    if g.rf.children_awaiting:
+        timesfuncs.l_assign_children(g.rf, name)
     g.lf.itr_stamp_used[name] = True
     elapsed = t - g.tf.last_t
-    g.tf.times.stamps[name] += elapsed
-    g.tf.times.stamps_itrs[name].append(elapsed)
+    g.rf.stamps[name] += elapsed
+    g.rf.stamps_itrs[name].append(elapsed)
     g.tf.last_t = t
     return t
 
 
 def _enter_loop(name=None):
     g.tf.last_t = timer()
+    if g.rf.children_awaiting:
+        timesfuncs.l_assign_children(g.rf, UNASSIGNED)
     g.create_next_loop(name)
     if name is not None:
-        if name in g.tf.stamps:
+        if name in g.rf.stamps:
             raise ValueError("Duplicate name: {}".format(repr(name)))
-        g.tf.times.stamps[name] = 0.
-        g.tf.times.stamps_itrs[name] = []
+        g.rf.stamps[name] = 0.
+        g.rf.stamps_itrs[name] = []
         g.create_next_timer(name)
 
 
@@ -59,18 +72,20 @@ def _loop_start():
 def _loop_end():
     t = timer()
     g.tf.last_t = t
+    if g.rf.children_awaiting:
+        timesfuncs.l_assign_children(g.rf, UNASSIGNED)
     if g.lf.name is not None:
         g.focus_backward_timer()
-        g.tf.times.stamps[g.lf.name] += t - g.tf.last_t
-        g.tf.last_t = t
+        g.rf.stamps[g.lf.name] += t - g.tf.last_t
+        g.rf.last_t = t
         g.focus_forward_timer()
 
 
 def _exit_loop():
     if g.lf.name is not None:
+        # Then, currently in a timer made just for this loop, stop it.
         g.tf.stop()
-        # Need to get the data from this timer before removing it.
-        g.remove_last_timer()
+        g.remove_last_timer()  # timer data is saved inside this function.
     g.remove_last_loop()
 
 

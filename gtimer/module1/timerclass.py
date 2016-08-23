@@ -1,6 +1,6 @@
 # This one holds the Timer class (which will just be a few attributes).
 from timeit import default_timer as timer
-import timesclass
+# import timesclass
 
 
 # Starting simple.
@@ -8,8 +8,11 @@ class Timer(object):
 
     def __init__(self, name=None):
         self.name = name
-        self.times = timesclass.Times(name)
-        self.in_loop = False
+        # self.total = 0.
+        # self.stamps = dict()
+        # self.stamps_itrs = dict()
+        # self.children_awaiting = []
+        self.times = Times(self.name)
         self.start_t = timer()
         self.last_t = self.start_t
 
@@ -21,7 +24,20 @@ class Loop(object):
         self.stamps = list()
         self.itr_stamp_used = dict()
         self.while_condition = True
-        # self.start_t
+
+
+class Times(object):
+
+    def __init__(self, name=None, parent=None):
+        self.name = name
+        self.total = 0.
+        self.stamps = dict()
+        self.stamps_itrs = dict()
+        self.parent = None  # will refer to another Times instance.
+        self.pos_in_parent = None  # will refer to a stamp name.
+        self.children = dict()  # key: position in self, value: list of Times instances.
+        self.children_awaiting = dict()  # key: name of child, value: a Times instance.
+        self.where_to_dump = None  # will refer to another Times instance.
 
 
 # class Loop(object):

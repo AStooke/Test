@@ -1,16 +1,16 @@
 # This one holds the times class.
 
 # Starting simple
-class Times(object):
+# class Times(object):
 
-    def __init__(self, name=None):
-        self.name = name
-        self.stamps = dict()
-        self.stamps_itrs = dict()
-        self.total = 0.
-        self.parent = None
-        self.pos_in_parent = None
-        self.children = dict()
+#     def __init__(self, name):
+#         self.name = name
+#         self.stamps = dict()
+#         self.stamps_itrs = dict()
+#         self.total = 0.
+#         self.parent = None
+#         self.pos_in_parent = None
+#         self.children = dict()
 
 # class Times(object):
 
