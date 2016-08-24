@@ -1,8 +1,11 @@
-# Global data structures here.
 
-# Yeah make a data structure here.
+"""
+All global data (and timer state information) resides here.
+"""
+
 from focusedstack import FocusedStack
-from timerclass import Timer, Loop, Times
+from timer_classes import Timer, Loop
+
 
 timer_stack = FocusedStack(Timer)
 loop_stack = FocusedStack(Loop)
@@ -29,22 +32,15 @@ lf = None  # loop_stack.focus: 'Loop in Focus'
 #
 
 
-def create_next_timer(name):
+def create_next_timer(name, **kwargs):
     global tf, rf
-    if tf is not None:
-        if name in rf.children_awaiting:
-            dump_location = rf.children_awaiting[name]
-            first_dump = False
-        else:
-            dump_location = Times(name=name, parent=rf)
-            rf.children_awaiting[name] = dump_location
-            first_dump = True
-    else:
-        first_dump = True
-        dump_location = None
-    tf = timer_stack.create_next(name=name, first_dump=first_dump)
+    tf = timer_stack.create_next(name, **kwargs)
     rf = tf.times
-    rf.dump_location = dump_location
+
+
+# Initialize the first member of the timer stack,
+# user may not remove this one.
+create_next_timer('root')
 
 
 def remove_last_timer():
@@ -52,6 +48,19 @@ def remove_last_timer():
     tf = timer_stack.remove_last()
     if tf is not None:
         rf = tf.times
+    else:
+        rf = None
+
+
+def pop_last_timer():
+    global tf, rf
+    last_timer = timer_stack.pop_last()
+    tf = timer_stack.focus
+    if tf is not None:
+        rf = tf.times
+    else:
+        rf = None
+    return last_timer
 
 
 def focus_backward_timer():
@@ -59,6 +68,8 @@ def focus_backward_timer():
     tf = timer_stack.focus_backward()
     if tf is not None:
         rf = tf.times
+    else:
+        rf = None
 
 
 def focus_forward_timer():
@@ -66,6 +77,8 @@ def focus_forward_timer():
     tf = timer_stack.focus_forward()
     if tf is not None:
         rf = tf.times
+    else:
+        rf = None
 
 
 def focus_last_timer():
@@ -73,6 +86,8 @@ def focus_last_timer():
     tf = timer_stack.focus_last()
     if tf is not None:
         rf = tf.times
+    else:
+        rf = None
 
 
 def focus_root_timer():
@@ -80,9 +95,11 @@ def focus_root_timer():
     tf = timer_stack.focus_root()
     if tf is not None:
         rf = tf.times
+    else:
+        rf = None
 
 
-def create_next_loop(name):
+def create_next_loop(name=None):
     global lf
     lf = loop_stack.create_next(name)
 

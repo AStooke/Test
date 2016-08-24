@@ -1,8 +1,7 @@
-# Everything to do with output, either to stdout or to file ,or whatever.
 
-
-# __all__ = ['write_report', 'print_report', 'write_structure', 'print_structure']
-
+"""
+Reporting functions acting on locally provided variables.
+"""
 
 # A few header formats.
 HDR_WIDTH = 12
@@ -13,11 +12,15 @@ FMT_GEN = FMT_NAME + "{}"
 FMT_INT = FMT_NAME + "{:,}"
 # Later, make it so the user can set width, prec with a function call.
 
+#
+# Functions to expose elsewhere in package.
+#
+
 
 def write_report(times, include_itrs=True, include_diagnostics=True):
         # if not self._stopped:
         #     raise RuntimeError("Cannot report an active Times structure, must be stopped.")
-        rep = "\n---Timer Report---"
+        rep = "\n---Begin Timer Report---"
         rep += FMT_GEN.format('Timer:', repr(times.name))
         rep += FMT_FLT.format('Total:', times.total)
         # rep += FMT_FLT.format('Stamps Sum:', times.stamps_sum)
@@ -27,15 +30,49 @@ def write_report(times, include_itrs=True, include_diagnostics=True):
         #     rep += FMT_INT.format('Calls:', times.calls)
         #     rep += FMT_INT.format('Calls Agg.:', times.calls_agg)
         rep += "\n\nIntervals\n---------"
-        rep += _report_stamps()
+        rep += _report_stamps(times)
         if include_itrs:
             rep_itrs = ''
-            rep_itrs += _report_itrs()
+            rep_itrs += _report_itrs(times)
             if rep_itrs:
                 rep += "\n\nLoop Iterations\n---------------"
                 rep += rep_itrs
-        rep += "\n---End Report---\n"
+        rep += "\n---End Timer Report---\n"
         return rep
+
+
+def print_report(include_diagnostics=True):
+    rep = write_report(include_diagnostics=include_diagnostics)
+    print rep
+    return rep
+
+
+def write_structure(times):
+    strct = '\n---Times Data Tree---\n'
+    strct += _write_structure(times)
+    strct += "\n\n"
+    return strct
+
+
+def _write_structure(times, indent=0):
+    strct = "\n{}{}".format(' ' * indent, repr(times.name))
+    if times.pos_in_parent:
+        strct += " ({})".format(repr(times.pos_in_parent))
+    for k, child_list in times.children.iteritems():
+        for child in child_list:
+            strct += _write_structure(child, indent=indent + 4)
+    return strct
+
+
+def print_structure(times):
+    strct = write_structure(times)
+    print strct
+    return strct
+
+
+#
+# Private helper functions.
+#
 
 
 def _report_stamps(times, indent=0, prec=4):
@@ -43,8 +80,9 @@ def _report_stamps(times, indent=0, prec=4):
     fmt = "\n{}{{:.<24}} {{:.{}g}}".format(' ' * indent, prec)
     for stamp in times.stamps:  # need to make this ordered again
         rep_stmps += fmt.format("{} ".format(stamp), times.stamps[stamp])
-        for child in times.children[stamp]:
-            rep_stmps += _report_stamps(child, indent=indent + 2)
+        if stamp in times.children:
+            for child in times.children[stamp]:
+                rep_stmps += _report_stamps(child, indent=indent + 2)
     return rep_stmps
 
 
@@ -54,7 +92,7 @@ def _report_itrs(times):
         if times.name:
             rep_itrs += FMT_GEN.format('Timer:', repr(times.name))
         if times.parent is not None:
-            rep_itrs += FMT_GEN.format('Parent Timer:', repr(times.parent._name))
+            rep_itrs += FMT_GEN.format('Parent Timer:', repr(times.parent.name))
             lin_str = _fmt_lineage(_get_lineage(times))
             rep_itrs += FMT_GEN.format('Stamp Lineage:', lin_str)
         rep_itrs += "\n\nIter."
@@ -90,8 +128,9 @@ def _report_itrs(times):
                 rep_itrs += next_line
             itr += 1
         rep_itrs += "\n"
-    for child in times.children:
-        rep_itrs += _report_itrs(child)
+    for _, children in times.children.iteritems():
+        for child in children:
+            rep_itrs += _report_itrs(child)
     return rep_itrs
 
 
@@ -110,30 +149,3 @@ def _fmt_lineage(lineage):
         return lin_str[:-3]
     except IndexError:
         pass
-
-
-def print_report(include_diagnostics=True):
-    print write_report(include_diagnostics=include_diagnostics)
-
-
-def write_structure(times):
-    struct_str = '\n---Times Data Tree---\n'
-    struct_str += _write_structure(times)
-    struct_str += "\n\n"
-    return struct_str
-
-
-def _write_structure(times, indent=0):
-    name_str = repr(times.name)
-    if times.parent:
-        struct_str = "\n{}{} ({})".format(' ' * indent, name_str, repr(times.pos_in_parent))
-    else:
-        struct_str = "\n{}{}".format(' ' * indent, name_str)
-    for k, child_list in times.children.iteritems():
-        for child in child_list:
-            struct_str += _write_structure(child, indent=indent + 4)
-    return struct_str
-
-
-def print_structure(times):
-    print write_structure(times)
