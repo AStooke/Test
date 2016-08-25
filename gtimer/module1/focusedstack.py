@@ -2,6 +2,7 @@
 LIFO list.
 Can move the focus (current item of interest) along the list.
 Always returns the current (new) focus after action.
+(Hidden from user.)
 """
 
 

@@ -1,6 +1,6 @@
 
 """
-Reporting functions acting on locally provided variables.
+Reporting functions acting on locally provided variables (hidden from user).
 """
 
 # A few header formats.
@@ -23,6 +23,7 @@ def write_report(times, include_itrs=True, include_diagnostics=True):
         rep = "\n---Begin Timer Report---"
         rep += FMT_GEN.format('Timer:', repr(times.name))
         rep += FMT_FLT.format('Total:', times.total)
+        rep += FMT_FLT.format('Self:', times.self_t)
         # rep += FMT_FLT.format('Stamps Sum:', times.stamps_sum)
         # if include_diagnostics:
         #     rep += FMT_FLT.format('Self:', times.self)

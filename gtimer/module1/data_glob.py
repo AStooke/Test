@@ -4,17 +4,34 @@ All global data (and timer state information) resides here.
 """
 
 from focusedstack import FocusedStack
-from timer_classes import Timer, Loop
+from timer_classes import Timer
+from loop_classes import Loop
 
 
+#
+# Constants.
+#
+UNASGN = 'UNASSIGNED'
+
+
+#
+# Containers for management of timer creation/destruction.
+#
 timer_stack = FocusedStack(Timer)
 loop_stack = FocusedStack(Loop)
 
 
 #
-# Shortcut variables and shortcut functions.
+# Signals
+# (communicate with functions exposed to user without input parameter)
 #
+entering_named_loop = False
+loop_broken = False
 
+
+#
+# Shortcut variables.
+#
 tf = None  # timer_stack.focus: 'Timer in Focus'
 rf = None  # timer_stack.focus.times: 'Times (Record) in Focus'
 lf = None  # loop_stack.focus: 'Loop in Focus'
@@ -31,16 +48,14 @@ lf = None  # loop_stack.focus: 'Loop in Focus'
 #     return shortcut
 #
 
+#
+# Shortcut functions.
+#
 
 def create_next_timer(name, **kwargs):
     global tf, rf
     tf = timer_stack.create_next(name, **kwargs)
     rf = tf.times
-
-
-# Initialize the first member of the timer stack,
-# user may not remove this one.
-create_next_timer('root')
 
 
 def remove_last_timer():
@@ -127,3 +142,9 @@ def focus_last_loop():
 def focus_root_loop():
     global lf
     lf = loop_stack.focus_root()
+
+
+#
+# Initialization.
+#
+create_next_timer('root')  # (user may not remove this one)

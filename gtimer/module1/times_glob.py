@@ -1,6 +1,6 @@
 
 """
-Times functions acting on global variables.
+Times functions acting on global variables (hidden from user).
 """
 
 import data_glob as g

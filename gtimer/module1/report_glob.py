@@ -1,6 +1,6 @@
 
 """
-Reporting functions acting on global variables.
+Reporting functions acting on global variables (all are exposed to user).
 """
 
 import data_glob as g

@@ -1,6 +1,6 @@
 
 """
-Times functions acting on locally provided variables.
+Times functions acting on locally provided variables (hidden from user).
 """
 
 #
@@ -15,6 +15,11 @@ def merge_times(rcvr, new, stamps_as_itr=True):
     _merge_dict(rcvr, new, 'stamps')
     _merge_dict(rcvr, new, 'stamps_itrs')
     _merge_children(rcvr, new)
+
+
+#
+# Private, helper functions.
+#
 
 
 def _merge_children(rcvr, new):
@@ -35,11 +40,6 @@ def _merge_children(rcvr, new):
             rcvr.children[child_pos] = new_children
     # Clean up references to old data as we go (not sure if helpful?).
     new.children.clear()
-
-
-#
-# Private, helper functions.
-#
 
 
 def _merge_dict(rcvr, new, attr):
