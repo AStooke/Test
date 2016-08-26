@@ -25,20 +25,35 @@ gt.stamp('first')
 #     time.sleep(0.1)
 #     gt.stamp('lA')
 
-loop = gt.timed_for([1, 2, 3, 4], 'loopB')
+# loop = gt.timed_for([1, 2, 3, 4], 'loopB')
 
+# for i in loop:
+#     if i == 3:
+#         gt.break_for()
+#         break
+#     time.sleep(0.1)
+#     gt.stamp('lB')
+
+loop = gt.timed_for([1, 2, 3], 'forfor')
+# with loop:
+i = 0
 for i in loop:
+    # loop.next()
+    print i
     if i == 3:
-        gt.break_for()
+        # gt.break_for()
+        loop.exit()
         break
     time.sleep(0.1)
-    gt.stamp('lB')
+    i += 1
+    gt.stamp('welp')
+loop.exit()
 
 
-loop2 = gt.timed_while('loopC')
-for i in loop2:
-    time.sleep(0.1)
-    gt.stamp('lC')
+# loop2 = gt.timed_while('loopC')
+# for i in loop2:
+#     time.sleep(0.1)
+#     gt.stamp('lC')
 
 
 

@@ -14,7 +14,11 @@ def funky():
 time.sleep(0.1)
 gt.stamp('first')
 # for i in [1, 2, 3]:
-for i in gt.timed_for([1, 2, 3], 'loop1'):
+loop = gt.timed_for([1, 2, 3], 'loop1')
+
+
+# for i in gt.timed_for([1, 2, 3], 'loop1'):
+for i in loop:
     print "i: ", i
     # print "g.lf: ", g.lf
     # print "g.lf.stamps: ", g.lf.stamps
@@ -27,7 +31,7 @@ for i in gt.timed_for([1, 2, 3], 'loop1'):
         # print "g.lf: ", g.lf
         # print "g.lf.stamps: ", g.lf.stamps
         time.sleep(0.1)
-        gt.stamp('l2_first')
+        gt.stamp('l2_first1234654654654654654645ghghgh54654')
         funky()
 
     #     funky()

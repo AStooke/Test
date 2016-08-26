@@ -7,37 +7,46 @@ from timeit import default_timer as timer
 
 
 class Timer(object):
-    """ Primarily contains status values."""
-    def __init__(self, name=None, loop_depth=0, **kwargs):
-        self.name = name
+    """ Current (temporary) values describing state of timer.
+    (Disappears or irrelevant after timing is complete.)
+    """
+
+    def __init__(self, name, rgstr_stamps=list(), loop_depth=0, **kwargs):
+        self.name = str(name)
         self.times = Times(name, **kwargs)
         self.loop_depth = loop_depth
         self.stopped = False
         self.paused = False
-        self.self_t = 0.
+        self.children_awaiting = dict()  # key: name of Timer, value: Times instance
+        self.dump = None  # refers to a Times instance
+        self.rgstr_stamps = rgstr_stamps
         self.start_t = timer()
         self.last_t = self.start_t
 
 
 class Times(object):
-    """ Primarily contains data values.
-
-    These might be exposed to user later, if they want to explore
-    the structure...maybe should write-protect.
+    """ Timing data resides here, including tree structure.
+    (Survives after timing is complete).
     """
 
-    def __init__(self, name=None, parent=None, pos_in_parent=None):
-        self.name = name
+    def __init__(self, name, parent=None, pos_in_parent=None):
+        self.name = str(name)
+        self.stamps = Stamps()
         self.total = 0.
-        self.self_t = 0.
-        self.stamps = dict()
-        self.stamps_itrs = dict()
-        self.stamps_sum = 0.
+        self.self_cut = 0.  # Self time from this timer.
+        self.self_agg = 0.  # Self time including all children.
         self.parent = parent  # refer to another Times instance.
-        self.pos_in_parent = pos_in_parent  # refer to a stamp name.
-        self.children = dict()  # key: position in self, value: list of Times instances.
-        self.children_awaiting = dict()  # key: name of child, value: a Times instance.
-        self.dump = None  # refer to another Times instance.
+        self.pos_in_parent = pos_in_parent  # refers to a stamp name.
+        self.children = dict()  # key: stamp, value: list of Times instances.
+
+
+class Stamps(object):
+    """ Detailed timing breakdown resides here."""
+    def __init__(self):
+        self.cum = dict()
+        self.itrs = dict()
+        self.order = list()
+        self.sum_t = 0.
 
 
 # class Loop(object):

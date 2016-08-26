@@ -1,17 +1,21 @@
 
 """
-Timer functions acting on global variables (and all exposed to user).
+Timer() functions acting on global variables (many exposed to user).
 """
 
 from timeit import default_timer as timer
 import data_glob as g
 import times_glob
 
+#
+# Functions to expose to user.
+#
+
 
 def start():
-    if g.rf.stamps:
+    if g.sf.cum:
         raise RuntimeError("Already have stamps, can't start again.")
-    if g.rf.children_awaiting:
+    if g.tf.children_awaiting:
         raise RuntimeError("Already have lower level timers, can't start again.")
     if g.tf.stopped:
         raise RuntimeError("Timer already stopped (must close and open new).")
@@ -26,6 +30,7 @@ def start():
 def stamp(name, unique=True):
     t = timer()
     elapsed = t - g.tf.last_t
+    name = str(name)
     if g.tf.stopped:
         raise RuntimeError("Timer already stopped.")
     if g.tf.paused:
@@ -36,22 +41,25 @@ def stamp(name, unique=True):
         else:
             _nonunique_loop_stamp(name, elapsed)
     else:
-        if name not in g.rf.stamps:
-            g.rf.stamps[name] = elapsed
+        if name not in g.sf.cum:
+            g.sf.cum[name] = elapsed
+            g.sf.order.append(name)
         elif unique:
-            raise ValueError("Duplicate stamp name: {}".format(repr(name)))
+            raise ValueError("Duplicate stamp name: {}".format(name))
         else:
-            g.rf.stamps[name] += elapsed
-    if g.rf.children_awaiting:
+            g.sf.cum[name] += elapsed
+    if g.tf.children_awaiting:
         times_glob.l_assign_children(name)
     g.tf.last_t = t
-    g.tf.self_t += timer() - t
+    g.rf.self_cut += timer() - t
+    g.rf.self_agg += g.rf.self_cut
     return t
 
 
 def l_stamp(name, unique=True):
     t = timer()
     elapsed = t - g.tf.last_t
+    name = str(name)
     if g.tf.stopped:
         raise RuntimeError("Timer already stopped.")
     if g.tf.paused:
@@ -62,10 +70,10 @@ def l_stamp(name, unique=True):
         _unique_loop_stamp(name, elapsed)
     else:
         _nonunique_loop_stamp(name, elapsed)
-    if g.rf.children_awaiting:
+    if g.tf.children_awaiting:
         times_glob.l_assign_children(name)
     g.tf.last_t = t
-    g.tf.self_t += timer() - t
+    g.rf.self_cut += timer() - t
     return t
 
 
@@ -76,17 +84,20 @@ def stop(name=None, unique=True):
     if name is not None:
         stamp(name, unique)
     else:
-        if g.rf.children_awaiting:
+        if g.tf.children_awaiting:
             times_glob.l_assign_children(g.UNASGN)
-    for _, v in g.rf.stamps.iteritems():
-        g.rf.stamps_sum += v
+    for _, v in g.sf.cum.iteritems():
+        g.sf.sum_t += v
+    for s in g.tf.rgstr_stamps:
+        if s not in g.sf.cum:
+            g.sf.cum[s] = 0.
+            g.sf.order.append(s)
     if not g.tf.paused:
         final_t = timer()
         # For now, add this self time here so that it can aggregate up,
         # even though it's just removed from the final.
-        g.tf.self_t += final_t - t
-        g.rf.total += final_t - g.tf.start_t - g.tf.self_t
-    g.rf.self_t = g.tf.self_t
+        g.rf.self_cut += final_t - t
+        g.rf.total += final_t - g.tf.start_t - g.rf.self_cut
     times_glob.dump_times()
     return t
 
@@ -131,23 +142,25 @@ def b_stamp(*args, **kwargs):
 
 def _unique_loop_stamp(name, elapsed):
     if name not in g.lf.stamps:
-        if name in g.rf.stamps:
-            raise ValueError("Duplicate name: {} (might be anonymous inner loop)".format(repr(name)))
+        if name in g.sf.cum:
+            raise ValueError("Duplicate name: {} (might be anonymous inner loop)".format(name))
         g.lf.stamps.append(name)
         g.lf.itr_stamp_used[name] = False
-        g.rf.stamps[name] = 0.
-        g.rf.stamps_itrs[name] = []
+        g.sf.cum[name] = 0.
+        g.sf.itrs[name] = []
+        g.sf.order.append(name)
     if g.lf.itr_stamp_used[name]:
-        raise RuntimeError("Loop stamp name twice in one itr: {}".format(repr(name)))
+        raise RuntimeError("Loop stamp name twice in one itr: {}".format(name))
     g.lf.itr_stamp_used[name] = True
-    g.rf.stamps[name] += elapsed
-    g.rf.stamps_itrs[name].append(elapsed)
+    g.sf.cum[name] += elapsed
+    g.sf.itrs[name].append(elapsed)
 
 
 def _nonunique_loop_stamp(name, elapsed):
-    if name not in g.rf.stamps:
-        g.rf.stamps[name] = elapsed
-        g.rf.stamps_itrs[name] = [elapsed]
+    if name not in g.sf.cum:
+        g.sf.cum[name] = elapsed
+        g.sf.itrs[name] = [elapsed]
+        g.sf.order.append(name)
     else:
-        g.rf.stmaps[name] += elapsed
-        g.rf.stamps_itrs[name].append(elapsed)
+        g.sf.cum[name] += elapsed
+        g.sf.itrs[name].append(elapsed)
