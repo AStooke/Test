@@ -3,14 +3,13 @@ Linear algebra speed test.
 Uses numpy.linalg.lstqr
 """
 
-from __future__ import absolute_import, print_function, division
+# from __future__ import absolute_import, print_function, division
 
-import os
 import sys
 from timeit import default_timer as timer
 from optparse import OptionParser
 
-import numpy as np
+# import numpy
 import multiprocessing as mp
 import psutil
 
@@ -43,12 +42,14 @@ def execute(n_proc=10, iters=10, N=10, verbose=True, set_affinity=False):
 
 def worker(N, rank, set_affinity):
     if set_affinity:
+        # import psutil  # Much slower if this is here instead of header!
         p = psutil.Process()
         num_cpu = psutil.cpu_count()
         p.cpu_affinity([rank % num_cpu])
-    X = np.random.randn(N, N)
-    Y = X @ X  # trying out the matrix multiply operator "@" ! (python3)
-    Y[0] += 1.
+    x = 7.
+    y = 8.
+    z = x * y
+    z += 1
 
 
 parser = OptionParser(
