@@ -13,11 +13,12 @@ from optparse import OptionParser
 # import subprocess
 
 import numpy as np
+from scipy import linalg as la
 # import theano
 # import theano.tensor as T
 
 
-def execute(N=1000, iters=10, verbose=True):
+def execute(N=1000, iters=10, verbose=True, solver='numpy'):
 
     if verbose:
         print('Some OS information:')
@@ -36,6 +37,7 @@ def execute(N=1000, iters=10, verbose=True):
         print('Numpy location:', np.__file__)
         print('Numpy version:', np.__version__)
 
+
     # Might want to make a separate one of these for each iteration, to also
     # check time to load data.
     b = np.random.randn(N)
@@ -44,11 +46,17 @@ def execute(N=1000, iters=10, verbose=True):
 
     # Do the first call without timing.
     t_prep = timer()
-    y = np.linalg.lstsq(X, b)
+    if solver == 'scipy':
+        y = la.lstsq(X, b)
+    else:
+        y = np.linalg.lstsq(X, b)
     t_first = timer()
     print("\ntime for prep run: {}".format(t_first - t_prep))
     for _ in range(iters):
-        y = np.linalg.lstsq(X, b)
+        if solver == 'scipy':
+            y = la.lstsq(X, b)
+        else:
+            y = np.linalg.lstsq(X, b)
         y[0][0] += 1  # Just to make sure it's actually giving a value each time.
     t_last = timer()
 
@@ -71,6 +79,9 @@ parser.add_option('--iter', action='store', dest='iter',
                   default=10, type="int",
                   help="The number of calls to gemm")
 
+parser.add_option('-s', '--solver', action='store', dest='solver',
+                  default='numpy', help="Either 'numpy' or 'scipy'")
+
 
 if __name__ == "__main__":
     options, arguments = parser.parse_args(sys.argv)
@@ -80,9 +91,15 @@ if __name__ == "__main__":
         sys.exit(0)
 
     verbose = not options.quiet
+    if options.solver == 'numpy':
+        solver = 'numpy'
+    elif options.solver == 'scipy':
+        solver = 'scipy'
+    else:
+        raise ValueError('Unrecognized solver, use "numpy" or "scipy"')
 
-    t = execute(N=options.N, iters=options.iter, verbose=verbose)
+    t = execute(N=options.N, iters=options.iter, verbose=verbose, solver=solver)
 
     print("\nWe executed", options.iter, end=' ')
-    print("\ncalls to numpy.linalg.lstsq on problem size %d" % options.N)
+    print("\ncalls to {}.linalg.lstsq on problem size {}".format(solver, options.N))
     print('\nTotal execution time: %.2fs.\n' % t)
