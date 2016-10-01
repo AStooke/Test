@@ -1,6 +1,5 @@
 """
-Linear algebra speed test.
-Uses numpy.linalg.lstqr
+Speed test for spawning processes and importing.
 """
 
 # from __future__ import absolute_import, print_function, division
