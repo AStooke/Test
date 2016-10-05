@@ -21,7 +21,7 @@ def execute(n_proc, vec_dim, itrs, use_lock, prec, size_X, verbose):
     np.set_printoptions(formatter={'float': '{{: 0.{}f}}'.format(prec).format})
 
     processes = [mp.Process(target=run_worker,
-                            args=(rank, vec_dim, shared_array, barriers, lock, 
+                            args=(rank, vec_dim, shared_array, barriers, lock,
                                   itrs, use_lock, size_X, verbose)
                             )
                     for rank in range(n_proc)]
@@ -41,16 +41,16 @@ def run_worker(rank, vec_dim, shared_array, barriers, lock, itrs, use_lock,
         X = np.random.randn(size_X, size_X)
     Y = np.random.randn(vec_dim)
 
-    # shared_array[:, rank] = rank  # write to the array before looping
-    # private_array = np.zeros_like(shared_array)
+    # shared_array[:, rank] = rank  # doesn't seem to affect anything.
+    # private_array = np.zeros_like(shared_array)  # compare times for private
 
     t_itrs = []
     t_bar = []
     for _ in range(itrs):
         if size_X > 0:
-            Z = X + X  # Other operation to cycle cache.
+            Z = X + X  # Optional, to cycle cache.
             Z[0] += 1
-        # Y = np.random.randn(vec_dim)
+        # Y = np.random.randn(vec_dim)  # doesn't seem to affect anything.
         barriers[0].wait()
         t_start = timer()
         if use_lock:
@@ -64,7 +64,7 @@ def run_worker(rank, vec_dim, shared_array, barriers, lock, itrs, use_lock,
         barriers[1].wait()
         t_bar.append(timer() - t_start)
 
-    t_itrs = np.asarray(t_itrs)  # For printing nicely.
+    t_itrs = np.asarray(t_itrs)  # for printing nicely.
     t_bar = np.asarray(t_bar)
     if rank == 0:
         print("\nOverall Itr Times: {}\n".format(t_bar))
@@ -86,14 +86,14 @@ parser.add_option('-n', '--n_proc', action='store', dest='n', default=40,
 parser.add_option('-d', '--vec_dim', action='store', dest='d', default=300000,
                   type='int',
                   help='Length of shared vector (array size = n * v)')
-parser.add_option('-i', '--itrs', action='store', dest='i', default=12,
+parser.add_option('-i', '--itrs', action='store', dest='i', default=100,
                   type='int', help='Number of iterations of writing to shared.')
 parser.add_option('-l', '--lock', action='store_true', dest='lock',
                   default=False,
                   help='If True, acquire lock when writing to shared.')
 parser.add_option('-p', '--prec', action='store', dest='p', default=2,
                   type='int', help='Precision of times printed.')
-parser.add_option('-X', '--size_X', action='store', dest='X', default=3000,
+parser.add_option('-X', '--size_X', action='store', dest='X', default=2000,
                   type='int',
                   help='Size of matrix (linear dimension) used to cycle cache.')
 parser.add_option('-v', '--verbose', action='store_true', dest='v',
