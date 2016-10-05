@@ -11,10 +11,13 @@ import sys
 from timeit import default_timer as timer
 
 
-def execute(n_proc, vec_dim, itrs, use_lock, prec, size_X, verbose):
+def execute(n_proc, vec_dim, itrs, use_lock, prec, size_X, verbose, reverse_idx):
 
-    shared_array = np.frombuffer(mp.RawArray('d', n_proc * vec_dim)
-                                 ).reshape((vec_dim, n_proc))
+    shared_array = np.frombuffer(mp.RawArray('d', n_proc * vec_dim))
+    if reverse_idx:
+        shared_array = shared_array.reshape(vec_dim, n_proc)
+    else:
+        shared_array = shared_array.reshape(n_proc, vec_dim)
     barriers = [mp.Barrier(n_proc) for _ in range(3)]
     lock = mp.Lock()
 
@@ -33,7 +36,7 @@ def execute(n_proc, vec_dim, itrs, use_lock, prec, size_X, verbose):
 
 
 def run_worker(rank, vec_dim, shared_array, barriers, lock, itrs, use_lock,
-               size_X, verbose):
+               size_X, verbose, reverse_idx):
     p = psutil.Process()
     p.cpu_affinity([rank % psutil.cpu_count()])
 
@@ -54,10 +57,16 @@ def run_worker(rank, vec_dim, shared_array, barriers, lock, itrs, use_lock,
         t_start = timer()
         if use_lock:
             with lock:
-                shared_array[:, rank] = Y
+                if reverse_idx:
+                    shared_array[:, rank] = Y
+                else:
+                    shared_array[rank, :] = Y
                 # private_array[:, rank] = Y
         else:
-            shared_array[:, rank] = Y
+            if reverse_idx:
+                shared_array[:, rank] = Y
+            else:
+                shared_array[rank, :] = Y
             # private_array[:, rank] = Y
         t_itrs.append(timer() - t_start)
         barriers[1].wait()
@@ -97,6 +106,8 @@ parser.add_option('-X', '--size_X', action='store', dest='X', default=2000,
                   help='Size of matrix (linear dimension) used to cycle cache.')
 parser.add_option('-v', '--verbose', action='store_true', dest='v',
                   default=False, help='If True, print all worker times.')
+parser.add_option('-r', '--reverse_idx', action='store_true', dest='r',
+                  default=False, help='It True, reverse indeces of array.')
 
 
 if __name__ == "__main__":
@@ -109,4 +120,5 @@ if __name__ == "__main__":
             prec=options.p,
             size_X=options.X,
             verbose=options.v,
+            reverse_idx=options.r
             )
