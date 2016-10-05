@@ -8,7 +8,7 @@ import sys
 from timeit import default_timer as timer
 from optparse import OptionParser
 
-# import numpy
+import numpy
 import multiprocessing as mp
 import psutil
 
