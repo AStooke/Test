@@ -41,7 +41,6 @@ def run_worker(rank, vec_dim, shared_array, barriers, lock, itrs, use_lock,
         X = np.random.randn(size_X, size_X)
     Y = np.random.randn(vec_dim)
 
-    # shared_array[:, rank] = rank  # doesn't seem to affect anything.
     # private_array = np.zeros_like(shared_array)  # compare times for private
 
     t_itrs = []
