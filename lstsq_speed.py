@@ -13,7 +13,7 @@ from optparse import OptionParser
 import numpy as np
 
 
-def execute(N=1000, iters=10, verbose=True, solver='numpy'):
+def execute(N=1000, itrs=10, verbose=True, solver='numpy'):
 
     if verbose:
         print('Some OS information:')
@@ -40,7 +40,7 @@ def execute(N=1000, iters=10, verbose=True, solver='numpy'):
     y = np.linalg.lstsq(X, b)
     t_first = timer()
     print("\nTime for prep run: {}".format(t_first - t_prep))
-    for _ in range(iters):
+    for _ in range(itrs):
         y = np.linalg.lstsq(X, b)
         y[0][0] += 1  # Use the result.
     t_last = timer()
@@ -58,7 +58,7 @@ parser.add_option('-q', '--quiet', action='store_true', dest='quiet',
 parser.add_option('-N', '--N', action='store', dest='N',
                   default=1000, type="int",
                   help="The N size to dgesld")
-parser.add_option('--iter', action='store', dest='iter',
+parser.add_option('-i', '--itrs', action='store', dest='itrs',
                   default=10, type="int",
                   help="The number of calls to dgesld")
 parser.add_option('-t', '--threads', action='store', dest='threads', default=0,
@@ -84,9 +84,9 @@ if __name__ == "__main__":
 
     verbose = not options.quiet
 
-    t = execute(N=options.N, iters=options.iter, verbose=verbose)
+    t = execute(N=options.N, itrs=options.itrs, verbose=verbose)
 
-    print("\nWe executed", options.iter)
+    print("\nWe executed", options.itrs)
     print("calls to numpy.linalg.lstsq on problem size {}".format(options.N))
     print("using MKL_NUM_THREADS = {}".format("unset" if th == 0 else th))
     print('\nTotal execution time: %.2fs.\n' % t)
