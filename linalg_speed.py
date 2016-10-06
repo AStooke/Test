@@ -7,15 +7,10 @@ from __future__ import absolute_import, print_function, division
 
 import os
 import sys
-# import time
 from timeit import default_timer as timer
 from optparse import OptionParser
-# import subprocess
 
 import numpy as np
-from scipy import linalg as la
-# import theano
-# import theano.tensor as T
 
 
 def execute(N=1000, iters=10, verbose=True, solver='numpy'):
@@ -27,37 +22,27 @@ def execute(N=1000, iters=10, verbose=True, solver='numpy'):
         print('    sys.prefix=', sys.prefix)
         print('Some environment variables:')
         print('    MKL_NUM_THREADS=', os.getenv('MKL_NUM_THREADS'))
-        print('    OMP_NUM_THREADS=', os.getenv('OMP_NUM_THREADS'))
-        print('    GOTO_NUM_THREADS=', os.getenv('GOTO_NUM_THREADS'))
+        # print('    OMP_NUM_THREADS=', os.getenv('OMP_NUM_THREADS'))
+        # print('    GOTO_NUM_THREADS=', os.getenv('GOTO_NUM_THREADS'))
         print()
-        print('Numpy config: (used when the Theano flag'
-              ' "blas.ldflags" is empty)')
+        print('Numpy config: ')
         np.show_config()
-        print('Numpy dot module:', np.dot.__module__)
+        print('Numpy linalg path:', np.linalg.__path__)
         print('Numpy location:', np.__file__)
         print('Numpy version:', np.__version__)
 
-
-    # Might want to make a separate one of these for each iteration, to also
-    # check time to load data.
     b = np.random.randn(N)
     x = np.random.randn(N, N)
-    X = x.T.dot(x) + 1e-2 * np.ones(N)
+    X = x.T.dot(x) + 1e-2 * np.ones(N)  # real problem has positive definite matrix
 
     # Do the first call without timing.
     t_prep = timer()
-    if solver == 'scipy':
-        y = la.lstsq(X, b)
-    else:
-        y = np.linalg.lstsq(X, b)
+    y = np.linalg.lstsq(X, b)
     t_first = timer()
-    print("\ntime for prep run: {}".format(t_first - t_prep))
+    print("\nTime for prep run: {}".format(t_first - t_prep))
     for _ in range(iters):
-        if solver == 'scipy':
-            y = la.lstsq(X, b)
-        else:
-            y = np.linalg.lstsq(X, b)
-        y[0][0] += 1  # Just to make sure it's actually giving a value each time.
+        y = np.linalg.lstsq(X, b)
+        y[0][0] += 1  # Use the result.
     t_last = timer()
 
     return t_last - t_first
@@ -70,17 +55,15 @@ parser = OptionParser(
 parser.add_option('-q', '--quiet', action='store_true', dest='quiet',
                   default=False,
                   help="If true, do not print the config options")
-
 parser.add_option('-N', '--N', action='store', dest='N',
                   default=1000, type="int",
-                  help="The N size to gemm")
-
+                  help="The N size to dgesld")
 parser.add_option('--iter', action='store', dest='iter',
                   default=10, type="int",
-                  help="The number of calls to gemm")
-
-parser.add_option('-s', '--solver', action='store', dest='solver',
-                  default='numpy', help="Either 'numpy' or 'scipy'")
+                  help="The number of calls to dgesld")
+parser.add_option('-t', '--threads', action='store', dest='threads', default=0,
+                  type="int",
+                  help="Number assigned to MKL_NUM_THREADS (0 for unset)")
 
 
 if __name__ == "__main__":
@@ -90,16 +73,20 @@ if __name__ == "__main__":
         print(options.help)
         sys.exit(0)
 
-    verbose = not options.quiet
-    if options.solver == 'numpy':
-        solver = 'numpy'
-    elif options.solver == 'scipy':
-        solver = 'scipy'
+    th = options.threads
+    if th != 0:
+        os.environ['MKL_NUM_THREADS'] = str(th)
     else:
-        raise ValueError('Unrecognized solver, use "numpy" or "scipy"')
+        try:
+            del os.environ['MKL_NUM_THREADS']
+        except KeyError:
+            pass
 
-    t = execute(N=options.N, iters=options.iter, verbose=verbose, solver=solver)
+    verbose = not options.quiet
 
-    print("\nWe executed", options.iter, end=' ')
-    print("\ncalls to {}.linalg.lstsq on problem size {}".format(solver, options.N))
+    t = execute(N=options.N, iters=options.iter, verbose=verbose)
+
+    print("\nWe executed", options.iter)
+    print("calls to numpy.linalg.lstsq on problem size {}".format(options.N))
+    print("using MKL_NUM_THREADS = {}".format("unset" if th == 0 else th))
     print('\nTotal execution time: %.2fs.\n' % t)
