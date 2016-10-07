@@ -24,17 +24,28 @@ def execute(options):
     rev_idx = options.rev_idx
     misalign = options.misalign
     typecode = options.typecode
+    chunk = options.chunk
 
-    m = n_proc if not rev_idx else vec_dim
-    n = vec_dim if not rev_idx else n_proc
-    shared_array = row_aligned_array(m, n, typecode=typecode, misalign=misalign)
+    if not chunk:
+        m = n_proc if not rev_idx else vec_dim
+        n = vec_dim if not rev_idx else n_proc
+        shared_array = row_aligned_array(m, n, typecode=typecode, misalign=misalign)
+        vb_idx = None
+    else:
+        # ignore rev_idx for the moment.
+        n_elm_worker = -(-vec_dim // n_proc)  # ceiling div
+        vec_boundaries = [n_elm_worker * i for i in range(n_proc + 1)]
+        vec_boundaries[-1] = vec_dim
+        vb_idx = [(vec_boundaries[i], vec_boundaries[i + 1]) for i in range(n_proc)]
+        shared_array = [row_aligned_array(n_proc, n_elm_worker, typecode=typecode, misalign=misalign)]
+
     barriers = [mp.Barrier(n_proc) for _ in range(3)]
     lock = mp.Lock()
 
     np.set_printoptions(formatter={'float': '{{: 0.{}f}}'.format(prec).format})
 
     processes = [mp.Process(target=run_worker,
-                            args=(rank, shared_array, barriers, lock, options))
+                            args=(rank, shared_array, vb_idx, barriers, lock, options))
                     for rank in range(n_proc)]
 
     for p in processes:
@@ -43,7 +54,7 @@ def execute(options):
         p.join()
 
 
-def run_worker(rank, shared_array, barriers, lock, options):
+def run_worker(rank, shared_array, vb_idx, barriers, lock, options):
 
     # n_proc = options.n_proc
     vec_dim = options.vec_dim
@@ -55,6 +66,7 @@ def run_worker(rank, shared_array, barriers, lock, options):
     rev_idx = options.rev_idx
     # misalign = options.misalign
     # typecode = options.typecode
+    chunk = options.chunk
 
     p = psutil.Process()
     p.cpu_affinity([rank % psutil.cpu_count()])
@@ -62,46 +74,50 @@ def run_worker(rank, shared_array, barriers, lock, options):
     if size_X > 0:
         X = np.random.randn(size_X, size_X)
     Y = np.random.randn(vec_dim)
+    W = np.random.randn(vec_dim)
 
     # private_array = np.zeros_like(shared_array)  # compare times for private
 
     t_itrs = []
     t_bar = []
-    for _ in range(itrs):
+    for i in range(itrs):
+        U = Y if (i % 2 == 0) else W
         if size_X > 0:
             Z = X + X  # Optional, to cycle cache.
             Z[0] += 1
-        # Y = np.random.randn(vec_dim)  # doesn't seem to affect anything.
+        # U = np.random.randn(vec_dim)  # doesn't seem to affect anything.
         barriers[0].wait()
         t_start = timer()
         if use_lock:
-            with lock:
-                if rev_idx:
-                    shared_array[:vec_dim, rank] = Y
-                else:
-                    shared_array[rank, :vec_dim] = Y
-                # private_array[:, rank] = Y
+            lock.acquire()
+            t_start_worker = timer()
         else:
-            if rev_idx:
-                shared_array[:vec_dim, rank] = Y
-            else:
-                shared_array[rank, :vec_dim] = Y
-            # private_array[:, rank] = Y
-        t_itrs.append(timer() - t_start)
+            t_start_worker = t_start
+        if chunk:
+            for array, vb in zip(shared_array, vb_idx):
+                array[rank, :(vb[1]-vb[0])] = U[vb[0]:vb[1]]
+        elif rev_idx:
+            shared_array[:vec_dim, rank] = U
+        else:
+            shared_array[rank, :vec_dim] = U
+        # private_array[:, rank] = Y
+        if use_lock:
+            lock.release()
+        t_itrs.append(timer() - t_start_worker)
         barriers[1].wait()
         t_bar.append(timer() - t_start)
 
     t_itrs = np.asarray(t_itrs)  # for printing nicely.
     t_bar = np.asarray(t_bar)
     if rank == 0:
-        print("\nOverall Itr Times: {}\n".format(t_bar))
-        print("Rank: {:2}, Itr Times: {}".format(rank, t_itrs))
+        print("\nOverall Itr Times: \n{}\n".format(t_bar))
+        print("Rank: {}, Itr Times: \n{}\n".format(rank, t_itrs))
         barriers[2].wait()
     else:
         barriers[2].wait()
         if verbose:
             with lock:
-                print("Rank: {:2}, Itr Times: {}".format(rank, t_itrs))
+                print("Rank: {}, Itr Times: \n{}\n".format(rank, t_itrs))
 
 
 def row_aligned_array(m, n, typecode='d', alignment=64, misalign=False):
@@ -159,6 +175,9 @@ parser.add_option('-m', '--misalgin', action='store_true', dest='misalign',
 parser.add_option('-t', '--typecode', action='store', dest='typecode',
                   default='d',
                   help='Typecode used in multiprocessing.RawArray()')
+parser.add_option('-c', '--chunk', action='store_true', dest='chunk',
+                  default=False,
+                  help='If True, allocate shared array in multiple chunks')
 
 
 if __name__ == "__main__":
