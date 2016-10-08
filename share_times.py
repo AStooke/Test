@@ -9,7 +9,7 @@ import psutil
 from optparse import OptionParser
 from timeit import default_timer as timer
 
-import ipdb
+# import ipdb
 
 
 def execute(options):
@@ -24,22 +24,16 @@ def execute(options):
     rev_idx = options.rev_idx
     misalign = options.misalign
     typecode = options.typecode
-    chunk = options.chunk
+    chunks = options.chunks
 
-    if not chunk:
+    if chunks > 1:
+        shared_array, vb_idx = chunked_array(n_proc, vec_dim, chunks, typecode)
+    else:
         m = n_proc if not rev_idx else vec_dim
         n = vec_dim if not rev_idx else n_proc
         shared_array = row_aligned_array(m, n, typecode=typecode, misalign=misalign)
         vb_idx = None
-    else:
-        # ignore rev_idx for the moment.
-        # n_elm_worker = -(-vec_dim // n_proc)  # ceiling div
-        # vec_boundaries = [n_elm_worker * i for i in range(n_proc + 1)]
-        # vec_boundaries[-1] = vec_dim
-        # vb_idx = [(vec_boundaries[i], vec_boundaries[i + 1]) for i in range(n_proc)]
-        # shared_array = [row_aligned_array(n_proc, n_elm_worker, typecode=typecode, misalign=misalign) for _ in range(n_proc)]
-        shared_array, vb_idx = chunked_array(n_proc, vec_dim, typecode)
-        # ipdb.set_trace()
+
     barriers = [mp.Barrier(n_proc) for _ in range(3)]
     lock = mp.Lock()
     # ipdb.set_trace()
@@ -67,7 +61,7 @@ def run_worker(rank, shared_array, vb_idx, barriers, lock, options):
     rev_idx = options.rev_idx
     # misalign = options.misalign
     # typecode = options.typecode
-    chunk = options.chunk
+    chunks = options.chunks
 
     p = psutil.Process()
     p.cpu_affinity([rank % psutil.cpu_count()])
@@ -94,9 +88,9 @@ def run_worker(rank, shared_array, vb_idx, barriers, lock, options):
             t_start_worker = timer()
         else:
             t_start_worker = t_start
-        if chunk:
+        if chunks > 1:
             for array, vb in zip(shared_array, vb_idx):
-                array[rank, :] = U[vb[0]:vb[1]]  # :(vb[1] - vb[0])
+                array[rank, :(vb[1] - vb[0])] = U[vb[0]:vb[1]]
         elif rev_idx:
             shared_array[:vec_dim, rank] = U
         else:
@@ -124,20 +118,22 @@ def run_worker(rank, shared_array, vb_idx, barriers, lock, options):
                 print("Rank: {}, Itr Times: \n{}\n".format(rank, t_itrs))
 
 
-def chunked_array(m, n, typecode='d'):
+def chunked_array(m, n, chunks=None, typecode='d'):
     """
-    m: number of rows of data (will also be the number of chunks)
+    m: number of rows of data (also the default number of chunks)
     n: number of columns of data
     typecode: used in multiprocessing.RawArray() (could also be a c_type)
 
     returns: a list of m numpy arrays referencing multiprocessing raw arrays,
     and a list of tuples containing the chunk boundaries
     """
-    chunk_size = -(-n // m)  # (ceiling)
-    bounds = [chunk_size * i for i in range(m + 1)]
+    if chunks is None:
+        chunks = m
+    chunk_size = -(-n // chunks)  # (ceiling)
+    bounds = [chunk_size * i for i in range(chunks + 1)]
     bounds[-1] = n
-    boundary_pairs = [(bounds[i], bounds[i + 1]) for i in range(m)]
-    chunked_array = [np.ctypeslib.as_array(mp.RawArray(typecode, m * chunk_size)).reshape(m, chunk_size) for i in range(m)]
+    boundary_pairs = [(bounds[i], bounds[i + 1]) for i in range(chunks)]
+    chunked_array = [np.ctypeslib.as_array(mp.RawArray(typecode, m * chunk_size)).reshape(m, chunk_size) for i in range(chunks)]
     return chunked_array, boundary_pairs
 
 
@@ -196,9 +192,8 @@ parser.add_option('-m', '--misalgin', action='store_true', dest='misalign',
 parser.add_option('-t', '--typecode', action='store', dest='typecode',
                   default='d',
                   help='Typecode used in multiprocessing.RawArray()')
-parser.add_option('-c', '--chunk', action='store_true', dest='chunk',
-                  default=False,
-                  help='If True, allocate shared array in multiple chunks')
+parser.add_option('-c', '--chunks', action='store', dest='chunks', default=1,
+                  type="int", help='Allocate shared array in multiple chunks')
 
 
 if __name__ == "__main__":
