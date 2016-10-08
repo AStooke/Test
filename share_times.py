@@ -37,8 +37,7 @@ def execute(options):
         vec_boundaries = [n_elm_worker * i for i in range(n_proc + 1)]
         vec_boundaries[-1] = vec_dim
         vb_idx = [(vec_boundaries[i], vec_boundaries[i + 1]) for i in range(n_proc)]
-        shared_array = [row_aligned_array(n_proc, n_elm_worker, typecode=typecode, misalign=misalign)]
-
+        shared_array = [row_aligned_array(n_proc, n_elm_worker, typecode=typecode, misalign=misalign) for _ in range(n_proc)]
     barriers = [mp.Barrier(n_proc) for _ in range(3)]
     lock = mp.Lock()
 
@@ -95,7 +94,7 @@ def run_worker(rank, shared_array, vb_idx, barriers, lock, options):
             t_start_worker = t_start
         if chunk:
             for array, vb in zip(shared_array, vb_idx):
-                array[rank, :(vb[1]-vb[0])] = U[vb[0]:vb[1]]
+                array[rank, :(vb[1] - vb[0])] = U[vb[0]:vb[1]]
         elif rev_idx:
             shared_array[:vec_dim, rank] = U
         else:
