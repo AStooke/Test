@@ -9,7 +9,7 @@ import psutil
 from optparse import OptionParser
 from timeit import default_timer as timer
 
-# import ipdb
+import ipdb
 
 
 def execute(options):
@@ -33,14 +33,16 @@ def execute(options):
         vb_idx = None
     else:
         # ignore rev_idx for the moment.
-        n_elm_worker = -(-vec_dim // n_proc)  # ceiling div
-        vec_boundaries = [n_elm_worker * i for i in range(n_proc + 1)]
-        vec_boundaries[-1] = vec_dim
-        vb_idx = [(vec_boundaries[i], vec_boundaries[i + 1]) for i in range(n_proc)]
-        shared_array = [row_aligned_array(n_proc, n_elm_worker, typecode=typecode, misalign=misalign) for _ in range(n_proc)]
+        # n_elm_worker = -(-vec_dim // n_proc)  # ceiling div
+        # vec_boundaries = [n_elm_worker * i for i in range(n_proc + 1)]
+        # vec_boundaries[-1] = vec_dim
+        # vb_idx = [(vec_boundaries[i], vec_boundaries[i + 1]) for i in range(n_proc)]
+        # shared_array = [row_aligned_array(n_proc, n_elm_worker, typecode=typecode, misalign=misalign) for _ in range(n_proc)]
+        shared_array, vb_idx = chunked_array(n_proc, vec_dim, typecode)
+        # ipdb.set_trace()
     barriers = [mp.Barrier(n_proc) for _ in range(3)]
     lock = mp.Lock()
-
+    # ipdb.set_trace()
     np.set_printoptions(formatter={'float': '{{: 0.{}f}}'.format(prec).format})
 
     processes = [mp.Process(target=run_worker,
@@ -94,7 +96,7 @@ def run_worker(rank, shared_array, vb_idx, barriers, lock, options):
             t_start_worker = t_start
         if chunk:
             for array, vb in zip(shared_array, vb_idx):
-                array[rank, :(vb[1] - vb[0])] = U[vb[0]:vb[1]]
+                array[rank, :] = U[vb[0]:vb[1]]  # :(vb[1] - vb[0])
         elif rev_idx:
             shared_array[:vec_dim, rank] = U
         else:
@@ -109,6 +111,8 @@ def run_worker(rank, shared_array, vb_idx, barriers, lock, options):
     t_itrs = np.asarray(t_itrs)  # for printing nicely.
     t_bar = np.asarray(t_bar)
     if rank == 0:
+        print("\nOverall Sum: {}".format(t_bar.sum()))
+        print("\nRank: {}, Sum: {}".format(rank, t_itrs.sum()))
         print("\nOverall Itr Times: \n{}\n".format(t_bar))
         print("Rank: {}, Itr Times: \n{}\n".format(rank, t_itrs))
         barriers[2].wait()
@@ -116,7 +120,25 @@ def run_worker(rank, shared_array, vb_idx, barriers, lock, options):
         barriers[2].wait()
         if verbose:
             with lock:
+                print("Rank: {}, Sum: {}".format(rank, t_itrs.sum()))
                 print("Rank: {}, Itr Times: \n{}\n".format(rank, t_itrs))
+
+
+def chunked_array(m, n, typecode='d'):
+    """
+    m: number of rows of data (will also be the number of chunks)
+    n: number of columns of data
+    typecode: used in multiprocessing.RawArray() (could also be a c_type)
+
+    returns: a list of m numpy arrays referencing multiprocessing raw arrays,
+    and a list of tuples containing the chunk boundaries
+    """
+    chunk_size = -(-n // m)  # (ceiling)
+    bounds = [chunk_size * i for i in range(m + 1)]
+    bounds[-1] = n
+    boundary_pairs = [(bounds[i], bounds[i + 1]) for i in range(m)]
+    chunked_array = [np.ctypeslib.as_array(mp.RawArray(typecode, m * chunk_size)).reshape(m, chunk_size) for i in range(m)]
+    return chunked_array, boundary_pairs
 
 
 def row_aligned_array(m, n, typecode='d', alignment=64, misalign=False):
