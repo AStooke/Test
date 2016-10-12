@@ -66,6 +66,8 @@ def execute(options):
                     out[:] = np.array([array.sum(axis=0) for array in chunked_array]).sum(axis=0)
                     t_itrs.append(timer() - t_start)
             elif sum_opt == 4:
+                # Does well for small, but really suffers (and grows memory) for large on i7.
+                # But seems to do well for large on KNL??
                 chunked_array = np.asarray(chunked_array)
                 for i in range(itrs):
                     t_start = timer()
