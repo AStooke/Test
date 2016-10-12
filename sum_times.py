@@ -34,7 +34,6 @@ def execute(options):
 
     chunked_array, boundary_pairs = chunked_2d_array(m, n, chunks, rows_whole, dtype)
     out = np.zeros(n, dtype)
-    out_intermediate = np.zeros((chunks, n), dtype)
 
 
     t_itrs = list()
@@ -53,6 +52,7 @@ def execute(options):
                     t_itrs.append(timer() - t_start)
             elif sum_opt == 2:
                 # Can be 2x faster than sum_opt 1, at least on the i7.
+                out_intermediate = np.zeros((chunks, n), dtype)  # maybe a lot of memory
                 for i in range(itrs):
                     t_start = timer()
                     for j, array in enumerate(chunked_array):
