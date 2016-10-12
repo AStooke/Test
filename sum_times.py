@@ -65,6 +65,12 @@ def execute(options):
                     t_start = timer()
                     out[:] = np.array([array.sum(axis=0) for array in chunked_array]).sum(axis=0)
                     t_itrs.append(timer() - t_start)
+            elif sum_opt == 4:
+                chunked_array = np.asarray(chunked_array)
+                for i in range(itrs):
+                    t_start = timer()
+                    out[:] = chunked_array.sum(axis=0).sum(axis=0)
+                    t_itrs.append(timer() - t_start)
             else:
                 raise ValueError("sum_opt not recognized. available: [1, 2, 3]")
         else:
