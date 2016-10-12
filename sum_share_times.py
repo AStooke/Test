@@ -22,7 +22,7 @@ def execute(options):
     # size_X = options.size_X
     # verbose = options.verbose
     rev_idx = options.rev_idx
-    misalign = options.misalign
+    # misalign = options.misalign
     typecode = options.typecode
     chunks = options.chunks
     rows_whole = not options.cols_whole
@@ -30,7 +30,7 @@ def execute(options):
 
     m = n_proc if not rev_idx else vec_dim
     n = vec_dim if not rev_idx else n_proc
-    shared_array, vb_pairs = chunked_2d_shared_array(m, n, chunks, rows_whole, typecode, misalign)
+    shared_array, vb_pairs = chunked_2d_shared_array(m, n, chunks, rows_whole, typecode)
 
     barriers = [mp.Barrier(n_proc) for _ in range(3)]
     lock = mp.Lock()
@@ -165,12 +165,12 @@ def chunked_2d_shared_array(m, n, chunks=2, rows_whole=True, typecode='d', misal
         chunk_shape = (m, chunk_size)
     chunk_flat_size = chunk_shape[0] * chunk_shape[1]
 
-    chunked_array = [row_aligned_array(chunk_shape[0], chunk_shape[1], typecode, misalign=misalign)
-        for _ in range(chunks)]
-
-    # chunked_array = [np.ctypeslib.as_array(
-    #     mp.RawArray(typecode, chunk_flat_size)).reshape(chunk_shape)
+    # chunked_array = [row_aligned_array(chunk_shape[0], chunk_shape[1], typecode, misalign=misalign)
     #     for _ in range(chunks)]
+
+    chunked_array = [np.ctypeslib.as_array(
+        mp.RawArray(typecode, chunk_flat_size)).reshape(chunk_shape)
+        for _ in range(chunks)]
 
     bounds = [chunk_size * i for i in range(chunks + 1)]
     bounds[-1] = chunk_dim_size
@@ -186,48 +186,48 @@ def chunked_2d_shared_array(m, n, chunks=2, rows_whole=True, typecode='d', misal
             last_shape = (m, last_size)
         last_flat_size = last_shape[0] * last_shape[1]
 
-        # # Make a reduced (but contiguous) view into the last chunk.
-        # chunked_array[-1] = chunked_array[-1].reshape(
-        #     chunk_flat_size)[:last_flat_size].reshape(last_shape)
+        # Make a reduced (but contiguous) view into the last chunk.
+        chunked_array[-1] = chunked_array[-1].reshape(
+            chunk_flat_size)[:last_flat_size].reshape(last_shape)
 
         # Alternatively, make a new chunk and ignore the previous allocation.
         # chunked_array[-1] = np.ctypeslib.as_array(
         #     mp.RawArray(typecode, last_flat_size)).reshape(last_shape)
 
-        chunked_array[-1] = row_aligned_array(last_shape[0], last_shape[1], typecode, misalign=misalign)
+        # chunked_array[-1] = row_aligned_array(last_shape[0], last_shape[1], typecode, misalign=misalign)
 
     return chunked_array, boundary_pairs
 
 
-def row_aligned_array(m, n, typecode='d', alignment=64, misalign=0):
-    """
-    m: number of rows of data
-    n: number of columns of data (will be padded)
-    typecode: first argument sent to mp.RawArray() (could also be a c_type)
-    alignment: [bytes] cache coherency line size
-    misalign: [elements] deliberately misalign rows by this many elements.
-    """
-    elem_size = np.ctypeslib.as_array(mp.RawArray(typecode, 1)).itemsize
-    assert alignment % elem_size == 0, "alignment must be multiple of elem_size"
-    cache_line = alignment // elem_size  # units: elements
-    misalign = int(misalign) % cache_line
-    misalign_bytes = misalign * elem_size
-    n_pad = n + cache_line - (n % cache_line)
-    num_elements = n_pad * m
-    x = np.ctypeslib.as_array(mp.RawArray(typecode, num_elements + cache_line))
-    assert x.ctypes.data % elem_size == 0, "multiprocessing.RawArray() did  \
-        not provide element-aligned memory (re-write this fcn to be byte-based)"
-    start_idx = -x.ctypes.data % alignment + misalign
-    # if misalign:
-    #     start_idx += cache_line // 2  # try to make maximum overlap
-    z = x[start_idx:start_idx + num_elements].reshape(m, n_pad)
-    assert misalign_bytes == (z.ctypes.data % alignment), "array (mis)alignment did not work"
-    # assert misalign != (z.ctypes.data % alignment == 0), "array alignment did not work"
-    for i in range(m):
-        assert misalign_bytes == (z[i, :].ctypes.data % alignment), "row (mis)alignment did not work"
-    #     assert misalign != (z[1, :].ctypes.data % alignment == 0), "row alignment did not work"
+# def row_aligned_array(m, n, typecode='d', alignment=64, misalign=0):
+#     """
+#     m: number of rows of data
+#     n: number of columns of data (will be padded)
+#     typecode: first argument sent to mp.RawArray() (could also be a c_type)
+#     alignment: [bytes] cache coherency line size
+#     misalign: [elements] deliberately misalign rows by this many elements.
+#     """
+#     elem_size = np.ctypeslib.as_array(mp.RawArray(typecode, 1)).itemsize
+#     assert alignment % elem_size == 0, "alignment must be multiple of elem_size"
+#     cache_line = alignment // elem_size  # units: elements
+#     misalign = int(misalign) % cache_line
+#     misalign_bytes = misalign * elem_size
+#     n_pad = n + cache_line - (n % cache_line)
+#     num_elements = n_pad * m
+#     x = np.ctypeslib.as_array(mp.RawArray(typecode, num_elements + cache_line))
+#     assert x.ctypes.data % elem_size == 0, "multiprocessing.RawArray() did  \
+#         not provide element-aligned memory (re-write this fcn to be byte-based)"
+#     start_idx = -x.ctypes.data % alignment + misalign
+#     # if misalign:
+#     #     start_idx += cache_line // 2  # try to make maximum overlap
+#     z = x[start_idx:start_idx + num_elements].reshape(m, n_pad)
+#     assert misalign_bytes == (z.ctypes.data % alignment), "array (mis)alignment did not work"
+#     # assert misalign != (z.ctypes.data % alignment == 0), "array alignment did not work"
+#     for i in range(m):
+#         assert misalign_bytes == (z[i, :].ctypes.data % alignment), "row (mis)alignment did not work"
+#     #     assert misalign != (z[1, :].ctypes.data % alignment == 0), "row alignment did not work"
 
-    return z
+#     return z
 
 
 parser = OptionParser(
@@ -253,9 +253,9 @@ parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
                   default=False, help='If True, print all worker times.')
 parser.add_option('-r', '--rev_idx', action='store_true', dest='rev_idx',
                   default=False, help='If True, reverse indeces of array.')
-parser.add_option('-m', '--misalgin', action='store', dest='misalign',
-                  default=0, type="int",
-                  help='Misalign rows vs cache line boundary by this many elements')
+# parser.add_option('-m', '--misalgin', action='store', dest='misalign',
+#                   default=0, type="int",
+#                   help='Misalign rows vs cache line boundary by this many elements')
 parser.add_option('-t', '--typecode', action='store', dest='typecode',
                   default='d',
                   help='Typecode used in multiprocessing.RawArray()')
