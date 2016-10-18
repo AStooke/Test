@@ -37,33 +37,46 @@ const int MAXEPOCH = 100;   // maximum number of epochs
 
 // global variables: user-defined, with defaults
 int nthread = 0;            // number of parallel threads (default set later)
-int nepoch = 20;            // number of timing epochs
-int nstep = 500;            // number of simulation steps per epoch
-int nwarmup = 20;           // number of simulation steps in warmup loop
+int nepoch = 10;            // number of timing epochs
+int nstep = 1000;            // number of simulation steps per epoch
+int nwarmepoch = 2;           // number of epochs in warmup loop
 
 
 // worker function for parallel finite-difference computation of derivatives
-void worker(const mjModel* m, const mjData* dmain, mjData* d, int n_step)
+void worker(const mjModel* m, mjData* d)
 {
-    int nv = m->nv;
-
-    // // copy state and control from dmain to thread-specific d
-    // d->time = dmain->time;
-    // mju_copy(d->qpos, dmain->qpos, m->nq);
-    // mju_copy(d->qvel, dmain->qvel, m->nv);
-    // mju_copy(d->qacc, dmain->qacc, m->nv);
-    // mju_copy(d->qfrc_applied, dmain->qfrc_applied, m->nv);
-    // mju_copy(d->xfrc_applied, dmain->xfrc_applied, 6*m->nbody);
-    // mju_copy(d->ctrl, dmain->ctrl, m->nu);
-
-
     // advance this thread's simulation for nstep
-    for( int i=0; i<n_step; i++ )
+    for( int i=0; i<nstep; i++ )
         mj_step(m, d);
 }
 
 
+void run_epoch(const mjModel* m, const mjData* dmain, mjData** d, double* cputm, int itr)
+{
+    // set every thread's simulation data
+    for( int n=0; n<nthread; n++ )
+    {
+        d[n]->time = dmain->time;
+        mju_copy(d[n]->qpos, dmain->qpos, m->nq);
+        mju_copy(d[n]->qvel, dmain->qvel, m->nv);
+        mju_copy(d[n]->qacc, dmain->qacc, m->nv);
+        mju_copy(d[n]->qfrc_applied, dmain->qfrc_applied, m->nv);
+        mju_copy(d[n]->xfrc_applied, dmain->xfrc_applied, 6*m->nbody);
+        mju_copy(d[n]->ctrl, dmain->ctrl, m->nu);
+    }
 
+    // start timer
+    double starttm = omp_get_wtime();
+
+    // run worker threads in parallel if OpenMP is enabled
+    #pragma omp parallel for schedule(static)
+    for( int n=0; n<nthread; n++ )
+        worker(m, d[n]);
+
+    // record duration in ms
+    cputm[itr] = 1000*(omp_get_wtime() - starttm);
+
+}
 
 // main function
 int main(int argc, char** argv)
@@ -71,7 +84,7 @@ int main(int argc, char** argv)
     // print help if not enough arguments
     if( argc<2 )
     {
-        printf("\n Arguments: modelfile [nthread nepoch nstep nwarmup]\n\n");
+        printf("\n Arguments: modelfile [nthread nstep nepoch nwarmepoch]\n\n");
         return 1;
     }
 
@@ -82,11 +95,11 @@ int main(int argc, char** argv)
     if( argc>2 )
         sscanf(argv[2], "%d", &nthread);
     if( argc>3 )
-        sscanf(argv[3], "%d", &nepoch);
+        sscanf(argv[3], "%d", &nstep);
     if( argc>4 )
-        sscanf(argv[4], "%d", &nstep);
+        sscanf(argv[4], "%d", &nepoch);
     if( argc>5 )
-        sscanf(argv[5], "%d", &nwarmup);
+        sscanf(argv[5], "%d", &nwarmepoch);
 
     // check number of threads
     if( nthread<1 || nthread>MAXTHREAD )
@@ -99,6 +112,13 @@ int main(int argc, char** argv)
     if( nepoch<1 || nepoch>MAXEPOCH )
     {
         printf("nepoch must be between 1 and %d\n", MAXEPOCH);
+        return 1;
+    }
+
+    // check number of warmup epochs
+    if( nwarmepoch<1 || nwarmepoch>MAXEPOCH )
+    {
+        printf("nwarmepoch must be between 1 and %d\n", MAXEPOCH);
         return 1;
     }
 
@@ -117,84 +137,56 @@ int main(int argc, char** argv)
 
     // print arguments
 #if defined(_OPENMP)
-    printf("\nnthread : %d (OpenMP)\n", nthread);
+    printf("\nnthread    : %d (OpenMP)\n", nthread);
 #else
-    printf("\nnthread : %d (serial)\n", nthread);
+    printf("\nnthread    : %d (serial)\n", nthread);
 #endif
-    printf("nepoch  : %d\n", nepoch);
-    printf("nstep   : %d\n", nstep);
+    printf("nstep      : %d\n", nstep);
+    printf("nepoch     : %d\n", nepoch);
+    printf("nwarmepoch : %d\n", nwarmepoch);
 
     // make mjData: main, per-thread
     mjData* dmain = mj_makeData(m);
     mjData* d[MAXTHREAD];
+    for( int n=0; n<nthread; n++ )
+        d[n] = mj_makeData(m);
 
     // set up OpenMP (if not enabled, this does nothing)
     omp_set_dynamic(0);
     omp_set_num_threads(nthread);
 
     // allocate statistics
-    double cputm[MAXEPOCH];
+    double cputm[MAXEPOCH], cputmwarm[MAXEPOCH];
 
-    // set every thread's simulation data
-    for( int n=0; n<nthread; n++ )
-    {
-        d[n] = mj_makeData(m);
-        d[n]->time = dmain->time;
-        mju_copy(d[n]->qpos, dmain->qpos, m->nq);
-        mju_copy(d[n]->qvel, dmain->qvel, m->nv);
-        mju_copy(d[n]->qacc, dmain->qacc, m->nv);
-        mju_copy(d[n]->qfrc_applied, dmain->qfrc_applied, m->nv);
-        mju_copy(d[n]->xfrc_applied, dmain->xfrc_applied, 6*m->nbody);
-        mju_copy(d[n]->ctrl, dmain->ctrl, m->nu);
-    }
+    // perform warmup epochs (not used in timing calculations)
+    for( int warmup=0; warmup<nwarmepoch; warmup++ )
+        run_epoch(m, dmain, d, cputmwarm, warmup);
 
-    // warmup run
-    #pragma omp parallel for schedule(static)
-    for( int n=0; n<nthread; n++ )
-        worker(m, dmain, d[n], nwarmup);
-
-    // run epochs, collect timing statistics
+    // run main epochs, collect timing statistics
     for( int epoch=0; epoch<nepoch; epoch++ )
-    {
-
-        // reset every thread's simulation data
-        for( int n=0; n<nthread; n++ )
-        {
-            d[n] = mj_makeData(m);
-            d[n]->time = dmain->time;
-            mju_copy(d[n]->qpos, dmain->qpos, m->nq);
-            mju_copy(d[n]->qvel, dmain->qvel, m->nv);
-            mju_copy(d[n]->qacc, dmain->qacc, m->nv);
-            mju_copy(d[n]->qfrc_applied, dmain->qfrc_applied, m->nv);
-            mju_copy(d[n]->xfrc_applied, dmain->xfrc_applied, 6*m->nbody);
-            mju_copy(d[n]->ctrl, dmain->ctrl, m->nu);
-        }
-
-        // start timer
-        double starttm = omp_get_wtime();
-
-        // run worker threads in parallel if OpenMP is enabled
-        #pragma omp parallel for schedule(static)
-        for( int n=0; n<nthread; n++ )
-            worker(m, dmain, d[n], nstep);
-
-        // record duration in ms
-        cputm[epoch] = 1000*(omp_get_wtime() - starttm);
-    }
+        run_epoch(m, dmain, d, cputm, epoch);
 
     // compute statistics
-    printf("\nepoch times:\n");
+    if( nwarmepoch > 0 )
+    {
+        printf("\nwarmup times (not used below):\n%.1f", cputmwarm[0]);
+        for( int warmup=1; warmup<nwarmepoch; warmup++ )
+            printf(", %.1f", cputmwarm[warmup]);
+    }
+    if( nepoch > 1)
+        printf("\nepoch times:\n%.1f", cputm[0]);
     double mcputm = 0;
     for( int epoch=0; epoch<nepoch; epoch++ )
     {
-        printf("%.1f, ", cputm[epoch]);
         mcputm += cputm[epoch];
+        if( epoch > 0)
+            printf(", %.1f", cputm[epoch]);
     }
 
     // print sizes, timing, accuracy
     printf("\n\navg stepping time, per epoch: %.2f ms", mcputm/nepoch);
-    printf("\navg stepping time, per thread: %.2f ms", mcputm/nthread);
-    printf("\neffective runs (nstep) per second: %.2f\n\n", nthread/mcputm*1000);
+    printf("\navg stepping time, per thread per epoch: %.2f ms", mcputm/nthread/nepoch);
+    printf("\neffective runs (nstep) per second: %.2f\n\n", nthread/mcputm*1000*nepoch);
 
 
     // shut down
