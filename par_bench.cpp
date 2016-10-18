@@ -39,10 +39,11 @@ const int MAXEPOCH = 100;   // maximum number of epochs
 int nthread = 0;            // number of parallel threads (default set later)
 int nepoch = 20;            // number of timing epochs
 int nstep = 500;            // number of simulation steps per epoch
+int nwarmup = 20;           // number of simulation steps in warmup loop
 
 
 // worker function for parallel finite-difference computation of derivatives
-void worker(const mjModel* m, const mjData* dmain, mjData* d, int id)
+void worker(const mjModel* m, const mjData* dmain, mjData* d, int n_step)
 {
     int nv = m->nv;
 
@@ -57,7 +58,7 @@ void worker(const mjModel* m, const mjData* dmain, mjData* d, int id)
 
 
     // advance this thread's simulation for nstep
-    for( int i=0; i<nstep; i++ )
+    for( int i=0; i<n_step; i++ )
         mj_step(m, d);
 }
 
@@ -70,7 +71,7 @@ int main(int argc, char** argv)
     // print help if not enough arguments
     if( argc<2 )
     {
-        printf("\n Arguments: modelfile [nthread nepoch nstep]\n\n");
+        printf("\n Arguments: modelfile [nthread nepoch nstep nwarmup]\n\n");
         return 1;
     }
 
@@ -84,6 +85,8 @@ int main(int argc, char** argv)
         sscanf(argv[3], "%d", &nepoch);
     if( argc>4 )
         sscanf(argv[4], "%d", &nstep);
+    if( argc>5 )
+        sscanf(argv[5], "%d", &nwarmup);
 
     // check number of threads
     if( nthread<1 || nthread>MAXTHREAD )
@@ -124,6 +127,15 @@ int main(int argc, char** argv)
     // make mjData: main, per-thread
     mjData* dmain = mj_makeData(m);
     mjData* d[MAXTHREAD];
+
+    // set up OpenMP (if not enabled, this does nothing)
+    omp_set_dynamic(0);
+    omp_set_num_threads(nthread);
+
+    // allocate statistics
+    double cputm[MAXEPOCH];
+
+    // set every thread's simulation data
     for( int n=0; n<nthread; n++ )
     {
         d[n] = mj_makeData(m);
@@ -136,16 +148,27 @@ int main(int argc, char** argv)
         mju_copy(d[n]->ctrl, dmain->ctrl, m->nu);
     }
 
-    // set up OpenMP (if not enabled, this does nothing)
-    omp_set_dynamic(0);
-    omp_set_num_threads(nthread);
+    // warmup run
+    #pragma omp parallel for schedule(static)
+    for( int n=0; n<nthread; n++ )
+        worker(m, dmain, d[n], nwarmup);
 
-    // allocate statistics
-    double cputm[MAXEPOCH];
-
-    // run epochs, collect statistics
+    // run epochs, collect timing statistics
     for( int epoch=0; epoch<nepoch; epoch++ )
     {
+
+        // reset every thread's simulation data
+        for( int n=0; n<nthread; n++ )
+        {
+            d[n] = mj_makeData(m);
+            d[n]->time = dmain->time;
+            mju_copy(d[n]->qpos, dmain->qpos, m->nq);
+            mju_copy(d[n]->qvel, dmain->qvel, m->nv);
+            mju_copy(d[n]->qacc, dmain->qacc, m->nv);
+            mju_copy(d[n]->qfrc_applied, dmain->qfrc_applied, m->nv);
+            mju_copy(d[n]->xfrc_applied, dmain->xfrc_applied, 6*m->nbody);
+            mju_copy(d[n]->ctrl, dmain->ctrl, m->nu);
+        }
 
         // start timer
         double starttm = omp_get_wtime();
@@ -153,28 +176,25 @@ int main(int argc, char** argv)
         // run worker threads in parallel if OpenMP is enabled
         #pragma omp parallel for schedule(static)
         for( int n=0; n<nthread; n++ )
-            worker(m, dmain, d[n], n);
+            worker(m, dmain, d[n], nstep);
 
         // record duration in ms
         cputm[epoch] = 1000*(omp_get_wtime() - starttm);
-
-        // // advance main simulation for nstep
-        // for( int i=0; i<nstep; i++ )
-        //     mj_step(m, dmain);
     }
 
     // compute statistics
-    printf("\n epoch times:\n");
+    printf("\nepoch times:\n");
     double mcputm = 0;
     for( int epoch=0; epoch<nepoch; epoch++ )
     {
-        printf("%.0f, ", cputm[epoch]);
+        printf("%.1f, ", cputm[epoch]);
         mcputm += cputm[epoch];
     }
 
     // print sizes, timing, accuracy
     printf("\n\navg stepping time, per epoch: %.2f ms", mcputm/nepoch);
-    printf("\navg stepping time, per thread: %.2f ms\n\n", mcputm/nthread);
+    printf("\navg stepping time, per thread: %.2f ms", mcputm/nthread);
+    printf("\neffective runs (nstep) per second: %.2f\n\n", nthread/mcputm*1000);
 
 
     // shut down
