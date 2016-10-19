@@ -87,7 +87,7 @@ void run_all(double* x, double* y, float* xs, float* ys)
 
     // Whatever math functions desired to test.
     do_math_vd( vdTanh, x, y, vecsize, "vdTanh");
-    do_math_vs( vsTanh, xs, ys, vecsize, "vdTanh");
+    do_math_vs( vsTanh, xs, ys, vecsize, "vsTanh");
     do_math_vd( vdExpm1, x, y, vecsize, "vdExpm1");
     do_math_vs( vsExpm1, xs, ys, vecsize, "vsExpm1");
     do_math_vd( vdSin, x, y, vecsize, "vdSin");
@@ -143,12 +143,36 @@ int main(int argc, char** argv)
         float *xs = (float *)xsmem;
         float *ys = (float *)ysmem;
 
+        int memalign_success = 1;
+        if( (long long int) (x) % ALIGN != 0)
+            memalign_success = 0;
+        if( (long long int) (y) % ALIGN != 0)
+            memalign_success = 0;
+        if( (long long int) (xs) % ALIGN != 0)
+            memalign_success = 0;
+        if( (long long int) (ys) % ALIGN != 0)
+            memalign_success = 0;
+        if( memalign_success == 0)
+            printf("WARNING: memory alignmed did not succeed.");
+
         run_all( x, y, xs, ys);
     }
     else
     {
         double x[vecsize], y[vecsize];
         float xs[vecsize], ys[vecsize];
+
+        int memalign_success = 0;
+        if( (long long int) (x) % ALIGN == 0)
+            memalign_success = 1;
+        if( (long long int) (y) % ALIGN == 0)
+            memalign_success = 1;
+        if( (long long int) (xs) % ALIGN == 0)
+            memalign_success = 1;
+        if( (long long int) (ys) % ALIGN == 0)
+            memalign_success = 1;
+        if( memalign_success == 1)
+            printf("WARNING: at least one variable accidentally memory aligned.\n\n");
 
         run_all(x, y, xs, ys);
     }
