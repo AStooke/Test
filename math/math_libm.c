@@ -10,42 +10,75 @@ Test libm math function speed
 // #include "amdlibm.h"
 #include <time.h>
 #define PREC 10000000
-#define MAXVEC 100000
+#define MAXVEC 1000000
+#define ALIGN 64
 
 int vecsize = 1000;  // length of vector to compute on
 int loops = 1000;   // number of times to compute each complete vector
 float min = 0;     // use uniform dist between (min,max), affects math funcs
 float max = 1;
+int memalign = 0;  // boolean, whether to align vectory memory to cache
+int warmup = 1;  // boolean, whether to perform warmup run of each computation
 
-int main(int argc, char** argv)
+
+void do_math_d( double (*func)(double), double* x, double* y, char* name)
 {
-    double x[MAXVEC], a[MAXVEC], b[MAXVEC], c[MAXVEC];
-    float xs[MAXVEC], as[MAXVEC], bs[MAXVEC], cs[MAXVEC];
+    clock_t begin, end;
+    int i, j;
+
+    // warmup run
+    if( warmup > 0 )
+    {
+        for(j = 0; j < loops; j++){
+            for(i = 0; i < vecsize; i++)
+                y[i] = (*func)(x[i]);
+            y[0] += 1.0;  // a little extra calculation to make sure it executes
+        }
+    }
+
+    // timed run
+    begin = clock();
+    for(j = 0; j < loops; j++){
+        for(i = 0; i < vecsize; i++)
+            y[i] = (*func)(x[i]);
+        y[0] += 1.0;  // a little extra calculation to make sure it executes
+    }
+    end = clock();
+    printf("%s: %f s\n", name, (double) (end - begin) / CLOCKS_PER_SEC);
+}
+
+void do_math_f( float (*func)(float), float* x, float* y, char* name)
+{
+    clock_t begin, end;
+    int i, j;
+
+    // warmup run
+    if( warmup > 0 )
+    {
+        for(j = 0; j < loops; j++){
+            for(i = 0; i < vecsize; i++)
+                y[i] = (*func)(x[i]);
+            y[0] += 1.0;  // a little extra calculation to make sure it executes
+        }
+    }
+
+    // timed run
+    begin = clock();
+    for(j = 0; j < loops; j++){
+        for(i = 0; i < vecsize; i++)
+            y[i] = (*func)(x[i]);
+        y[0] += 1.0;  // a little extra calculation to make sure it executes
+    }
+    end = clock();
+    printf("%s: %f s\n", name, (double) (end - begin) / CLOCKS_PER_SEC);
+}
+
+
+void run_all(double* x, double* y, float* xs, float* ys)
+{
     srand(time(NULL));
     int i, j;
     clock_t begin, end;
-
-    // get numeric command-line arguments
-    if( argc==1 )
-        printf("optional arguments: [min max vecsize loops]\n");
-    if( argc>1 )
-        sscanf(argv[1], "%f", &min);
-    if( argc>2 )
-        sscanf(argv[2], "%f", &max);
-    if( argc>3 )
-        sscanf(argv[3], "%d", &vecsize);
-    if( argc>4 )
-        sscanf(argv[4], "%d", &loops);
-
-    // check number of threads
-    if( vecsize<1 || vecsize>MAXVEC )
-    {
-        printf("vecsize must be between 1 and %d\n", MAXVEC);
-        return 1;
-    }
-
-    printf("Performing %d loops on vectors of length %d\n", loops, vecsize);
-    printf("Using random numbers between (%f, %f)\n\n", min, max);
 
     // generate the random numbers used as function arguments
     begin = clock();
@@ -56,77 +89,75 @@ int main(int argc, char** argv)
     end = clock();
     printf("random number generation: %f s\n", (double) (end - begin) / CLOCKS_PER_SEC);
 
-
-    // tanh (double)
-    begin = clock();
-    for(j = 0; j < loops; j++){
-        for(i = 0; i < vecsize; i++){
-            a[i] = tanh(x[i]);
-        }
-        a[0] += 1.0;  // maybe needed for the intel compiler not to skip computation
-    }
-    end = clock();
-    printf("tanh: %f s\n", (double) (end - begin) / CLOCKS_PER_SEC);
-
-    // tanh (single)
-    begin = clock();
-    for(j = 0; j < loops; j++){
-        for(i = 0; i < vecsize; i++){
-            as[i] = tanhf(xs[i]);
-        }
-        as[0] += 1.0;
-    }
-    end = clock();
-    printf("tanhf: %f s\n", (double) (end - begin) / CLOCKS_PER_SEC);
-
-    // expm1 (double)
-    begin = clock();
-    for(j = 0; j < loops; j++){
-        for(i = 0; i < vecsize; i++){
-            b[i] = expm1(x[i]);
-        }
-        b[0] += 1.0;
-    }
-    end = clock();
-    printf("expm1: %f s\n", (double) (end - begin) / CLOCKS_PER_SEC);
-
-    // expm1 (single)
-    begin = clock();
-    for(j = 0; j < loops; j++){
-        for(i = 0; i < vecsize; i++){
-            bs[i] = expm1f(xs[i]);
-        }
-        bs[0] += 1.0;
-    }
-    end = clock();
-    printf("expm1f: %f s\n", (double) (end - begin) / CLOCKS_PER_SEC);
-
-    // sin (double)
-    begin = clock();
-    for(j = 0; j < loops; j++){
-        for(i = 0; i < vecsize; i++){
-            c[i] = sin(x[i]);
-        }
-        c[0] += 1.0;
-    }
-    end = clock();
-    printf("sin: %f s\n", (double) (end - begin) / CLOCKS_PER_SEC);
-
-    // sin (single)
-    begin = clock();
-    for(j = 0; j < loops; j++){
-        for(i = 0; i < vecsize; i++){
-            cs[i] = sinf(xs[i]);
-        }
-        cs[0] += 1.0;
-    }
-    end = clock();
-    printf("sinf: %f s\n", (double) (end - begin) / CLOCKS_PER_SEC);
+    // Whatever math functions desired to test.
+    do_math_d( tanh, x, y, "tanh");
+    do_math_f( tanhf, xs, ys, "tanhf");
+    do_math_d( expm1, x, y, "expm1");
+    do_math_f( expm1f, xs, ys, "expm1f");
+    do_math_d( sin, x, y, "sin");
+    do_math_f( sinf, xs, ys, "sinf");
 
     // make sure it actually computes the values.
-    printf("\nMake sure the values are actually computed:\n");
-    printf("x[0]: %f, a[0]: %f, b[0]: %f, c[0]: %f\n", x[0], a[0], b[0], c[0]);
-    printf("xs[0]: %f, as[0]: %f, bs[0]: %f, cs[0]: %f\n", xs[0], as[0], bs[0], cs[0]);
+    printf("\nMake sure some values are actually computed:\n");
+    printf("x[0]: %f, y[0]: %f\n", x[0], y[0]);
+    printf("xs[0]: %f, ys[0]: %f\n", xs[0], ys[0]);
+}
+
+
+
+int main(int argc, char** argv)
+{
+    // get numeric command-line arguments
+    if( argc==1 )
+        printf("optional arguments: [min max vecsize loops memalign warmup]\n");
+    if( argc>1 )
+        sscanf(argv[1], "%f", &min);
+    if( argc>2 )
+        sscanf(argv[2], "%f", &max);
+    if( argc>3 )
+        sscanf(argv[3], "%d", &vecsize);
+    if( argc>4 )
+        sscanf(argv[4], "%d", &loops);
+    if( argc>5 )
+        sscanf(argv[5], "%d", &memalign); // used as: True if > 0
+    if( argc>6 )
+        sscanf(argv[6], "%d", &warmup);  // used as: True if > 0
+
+    // check number of threads
+    if( vecsize<1 || vecsize>MAXVEC )
+    {
+        printf("vecsize must be between 1 and %d\n", MAXVEC);
+        return 1;
+    }
+
+    printf("Performing this many loops: %d\n", loops);
+    printf("On vectors of length: %d\n", vecsize);
+    printf("Using random numbers between (%f, %f)\n", min, max);
+    printf("Memory Aligned: %s\n", memalign > 0 ? "Yes" : "No");
+    printf("Pre-timing warmup loops: %s\n\n", warmup > 0 ? "Yes" : "No");
+
+    if( memalign > 0)
+    {
+        void *xmem, *ymem, *xsmem, *ysmem;
+        int pr;
+        pr = posix_memalign(&xmem, ALIGN, vecsize * sizeof(double));
+        pr = posix_memalign(&ymem, ALIGN, vecsize * sizeof(double));
+        pr = posix_memalign(&xsmem, ALIGN, vecsize * sizeof(float));
+        pr = posix_memalign(&ysmem, ALIGN, vecsize * sizeof(float));
+        double *x = (double *)xmem;
+        double *y = (double *)ymem;
+        float *xs = (float *)xsmem;
+        float *ys = (float *)ysmem;
+
+        run_all( x, y, xs, ys);
+    }
+    else
+    {
+        double x[vecsize], y[vecsize];
+        float xs[vecsize], ys[vecsize];
+
+        run_all(x, y, xs, ys);
+    }
 
     return 0;
 }
