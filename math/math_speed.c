@@ -1,14 +1,17 @@
 /*
-Test amdlibm math function speed
-(duplicate of math_libm.c but with amd include).
+Test speed of different math function libraries.
+
+This source code provides a separate executable for testing each libm,
+amdlibm, svml, depending on compilation.  (mkl_vml requires different source)
 */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-// #include "mkl.h"
-#include "amdlibm.h"
 #include <time.h>
+#ifdef AMD  // (compile with -DAMD)
+    #include "amdlibm.h"
+#endif
 #define PREC 10000000
 #define MAXVEC 1000000
 #define ALIGN 64
@@ -17,7 +20,7 @@ int vecsize = 1000;  // length of vector to compute on
 int loops = 1000;   // number of times to compute each complete vector
 float min = 0;     // use uniform dist between (min,max), affects math funcs
 float max = 1;
-int memalign = 0;  // boolean, whether to align vectory memory to cache
+int memalign = 1;  // boolean, whether to align vectory memory to cache
 int warmup = 1;  // boolean, whether to perform warmup run of each computation
 
 
@@ -46,6 +49,7 @@ void do_math_d( double (*func)(double), double* x, double* y, char* name)
     end = clock();
     printf("%s: %f s\n", name, (double) (end - begin) / CLOCKS_PER_SEC);
 }
+
 
 void do_math_f( float (*func)(float), float* x, float* y, char* name)
 {
@@ -104,7 +108,6 @@ void run_all(double* x, double* y, float* xs, float* ys)
 }
 
 
-
 int main(int argc, char** argv)
 {
     // get numeric command-line arguments
@@ -131,7 +134,7 @@ int main(int argc, char** argv)
     }
 
     printf("Performing this many loops: %d\n", loops);
-    printf("On vectors of length: %d\n", vecsize);
+    printf("On a vector of length: %d\n", vecsize);
     printf("Using random numbers between (%f, %f)\n", min, max);
     printf("Memory Aligned: %s\n", memalign > 0 ? "Yes" : "No");
     printf("Pre-timing warmup loops: %s\n\n", warmup > 0 ? "Yes" : "No");
@@ -161,7 +164,7 @@ int main(int argc, char** argv)
         if( memalign_success == 0)
             printf("WARNING: memory alignmed did not succeed.");
 
-        run_all( x, y, xs, ys);
+        run_all(x, y, xs, ys);
     }
     else
     {
