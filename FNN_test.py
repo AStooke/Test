@@ -10,7 +10,7 @@ import psutil
 
 from keras.models import Sequential
 from keras.layers import Dense, Activation
-import tensorflow as tf
+# import tensorflow as tf
 
 
 in_size = 100
