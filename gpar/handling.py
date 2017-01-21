@@ -27,7 +27,7 @@ def inputs_handling(inputs, global_inputs):
     return tuple(mp_inputs), worker_indeces
 
 
-def outputs_handling(outputs):
+def gpu_outputs(outputs):
     """
     Change all outputs to remain on GPU, if not already.  Record which were
     requested to return to CPU so they can be transfered after reducing.
@@ -54,7 +54,25 @@ def outputs_handling(outputs):
             return outputs, outputs_to_cpu
 
 
-def shareds_handling(theano_function, global_shareds, global_named_shareds):
+def register_inputs(inputs, previous_n_inputs, global_named_inputs):
+    fcn_input_codes = list()
+    new_n_inputs = previous_n_inputs
+    for inpt in inputs:
+        if inpt.name is None:
+            fcn_input_codes.append(new_n_inputs)
+            new_n_inputs += 1
+            raise RuntimeWarning("Gpar encountered un-named input: shared memory management is improved if inputs used in multiple functions are named.")
+        else:
+            if inpt.name in global_named_inputs:
+                fcn_input_codes.append(global_named_inputs[inpt.name])
+            else:
+                fcn_input_codes.append(new_n_inputs)
+                global_named_inputs[inpt.name] = new_n_inputs
+                new_n_inputs += 1
+    return tuple(fcn_input_codes), new_n_inputs
+
+
+def register_shareds(theano_function, global_shareds, global_named_shareds):
     """
     Find any shared variables associated with the function, and keep a
     centralized list of all such shareds (only one entry per distinct variable).
@@ -79,7 +97,7 @@ def shareds_handling(theano_function, global_shareds, global_named_shareds):
     return tuple(fcn_shared_codes)
 
 
-def functions_handling(theano_functions, inputs, rank):
+def unpack_functions(theano_functions, inputs, rank):
     """
     Worker will recover shared variables in the same order as the master
     committed them, so they will have the same code (index).
@@ -92,7 +110,7 @@ def functions_handling(theano_functions, inputs, rank):
     for fcn in theano_functions:
         worker_indeces = None
         fcn_mp_inputs = list()
-        fcn_shared_codes = shareds_handling(fcn, shareds, named_shareds)
+        fcn_shared_codes = register_shareds(fcn, shareds, named_shareds)
         for store in fcn.input_storage:
             # Register inputs.
             if store.data is None:  # (it's an explicit input, not a shared)

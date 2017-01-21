@@ -12,12 +12,34 @@ GPU_COMM = 1
 BROADCAST = 0
 REDUCE = 1
 ALL_REDUCE = 2
+ALL_GATHER = 3
 
 # Where to put functions on their way to workers
-# (probably need to make this more secure)
+# (possibly need to make this secure somehow?)
 PKL_FILE = "function_dump.pkl"
 
-OPS = {0: 'sum', 1: 'prod'}   # TODO: complete these.
+SH_ARRAY_TAG = "active_shared_variable_shared_array_tag"  # (shouldn't be a conflict!)
+
+OPS = {"+": 0,
+       "sum": 0,
+       "add": 0,
+       "*": 1,
+       "prod": 1,
+       "product": 1,
+       "max": 2,
+       "maximum": 2,
+       "min": 3,
+       "minimum": 3,
+       "avg": 4,
+       "average": 4,
+       }
+
+WORKER_OPS = {0: "sum",
+              1: "prod",
+              2: "max",
+              3: "min",
+              4: "avg",
+              }
 
 
 class struct(dict):
@@ -86,21 +108,21 @@ def build_sync(n_gpu):
 
     mgr = mp.Manager()
     dictionary = mgr.dictionary()
-
     barriers = struct(
         distribute=mp.Barrier(n_gpu),
         exec_in=mp.Barrier(n_gpu),
         exec_out=mp.Barrier(n_gpu),
     )
     sync = struct(
-        dict=dictionary,  # can put anything in this (e.g. Clique comm_id)
+        dict=dictionary,  # use for setup e.g. Clique comm_id; serializes.
         quit=mp.RawValue(c_bool, False),
+        distributed=mp.RawValue(c_bool, False),
         exec_type=mp.RawValue('i', 0),
+        func_code=mp.RawValue('i', 0),
         comm_code=mp.RawValue('i', 0),
-        func_code=mp.RawVAlue('i', 0),
+        n_shared=mp.RawValue('i', 0),
         barriers=barriers,
     )
-
     return sync
 
 

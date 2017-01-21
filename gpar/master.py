@@ -9,13 +9,15 @@ import numpy as np
 import multiprocessing as mp
 import theano
 
+
 from Input import Input
 from Function import MasterFunction as Function
 import util
-import handling as h
+import handling
 from util import struct
 from util import (FUNCTION, GPU_COMM, BROADCAST, REDUCE, ALL_REDUCE,
-                       PKL_FILE, MASTER_RANK)
+                  PKL_FILE, MASTER_RANK, OPS, SH_ARRAY_TAG)
+from shmemarray import ShmemRawArray
 
 
 # globals
@@ -28,6 +30,7 @@ g = struct(
     sync=None,
     processes=list(),
     # Theano
+    n_inputs=0,
     inputs=list(),
     shareds=list(),
     named_shareds=dict(),
@@ -38,6 +41,13 @@ g = struct(
     gpu_comm=None,
     master_rank=None,
     )
+
+
+###############################################################################
+#
+#                           Building Functions.
+#
+###############################################################################
 
 
 def input(name, max_shape, typecode='f'):
@@ -80,38 +90,44 @@ def function(inputs, outputs=None, updates=None, name=None):
 
     # Check that all inputs have been registered and associate corresponding
     # multiprocessing shared memory with this function.
-    mp_inputs, worker_indeces = h.inputs_handling(inputs)
+    # mp_inputs, worker_indeces = handling.inputs_handling(inputs)
+
+    input_codes, g.n_inputs = handling.register_inputs(inputs, g.n_inputs, g.named_inputs)
 
     # Keep the outputs on the GPU; remember which to eventually send to CPU.
-    outputs, outputs_to_cpu = h.outputs_handling(outputs)
+    gpu_outputs, outputs_to_cpu = handling.gpu_outputs(outputs)
 
     # TODO: Probably still need to do something about updates and givens.
     theano_function = theano.function(inputs=inputs,
-                                      outputs=outputs,
+                                      outputs=gpu_outputs,
                                       updates=updates,
-                                      name=name)
+                                      name=name,
+                                      )
 
     g.theano_functions.append(theano_function)
 
     # Check for any shared values used in this function and keep track of them.
-    shared_codes = h.shareds_handling(theano_function)
+    shared_codes = handling.register_shareds(theano_function, g.shareds, g.named_shareds)
 
-    # Make each function aware of its unique code (idx in overall list).
-    next_fcn_code = len(g.gpar_functions)
     gpar_function = Function(name=name,
                              theano_function=theano_function,
-                             mp_inputs=mp_inputs,
+                             input_codes=input_codes,
                              outputs_to_cpu=outputs_to_cpu,
                              shared_codes=shared_codes,
                              mp_indeces=worker_indeces[0],
-                             code=next_fcn_code,
+                             code=len(g.gpar_functions),  # Fcn can ID itself.
                              gpu_comm=g.gpu_comm,
                              sync=g.sync,
                              )
     g.gpar_functions.append(gpar_function)
     return gpar_function
 
-# TODO: figure out how to organize collectives in master.
+
+###############################################################################
+#
+#                      GPU Collectives.
+#
+###############################################################################
 
 
 def gpar_fcn_typecheck(gpar_function):
@@ -122,6 +138,15 @@ def gpar_fcn_typecheck(gpar_function):
 def shared_name_check(name):
     if name not in g.named_shareds:
         raise ValueError("Unrecognized name for shared variable: ", name)
+
+
+def op_check(op):
+    if op not in OPS:
+        raise ValueError("Unrecognized reduction operator: ", op,
+            ", must be one of: ", [k for k in OPS.keys()])
+    elif op in ["avg", "average"]:
+        raise NotImplementedError
+    return op, OPS[op]
 
 
 def get_shared_codes(gpar_functions=None, shared_names=None):
@@ -152,80 +177,93 @@ def get_shared_codes(gpar_functions=None, shared_names=None):
     return tuple(sorted(set(shared_codes)))
 
 
-def gpu_comm_procedure(comm_func, comm_code):
-    def gpar_comm_fcn(functions=None, shared_names=None, **kwargs):
-        if g.closed:
-            raise RuntimeError("Cannot call GPU collectives after session closed.")
-        g.sync.exec_type.value = GPU_COMM
-        g.sync.exec_code.value = comm_code
-        shared_codes = get_shared_codes(functions, shared_names)
-        n_shareds = len(shared_codes)
-        g.sync.shared_codes[:n_shareds] = shared_codes
-        g.sync.n_shareds.value = n_shareds
-        g.sync.barriers.exec_in.wait()
-        for idx in shared_codes:
-            comm_func(idx, **kwargs)
-        g.sync.barriers.exec_out.wait()
-    return gpar_comm_fcn
+def gpu_comm_function(gpu_comm_func, comm_code, has_op=False):
+    def build_comm_procedure(f):
+        @functools.wraps(f)
+        def gpu_comm_procedure(*args, functions=None, shared_names=None, **kwargs):
+            if g.closed:
+                raise RuntimeError("Gpar already closed--cannot call comm function.")
+            g.sync.exec_type = GPU_COMM
+            g.sync.comm_code = comm_code
+            shared_codes = get_shared_codes(functions, shared_names)
+            n_shared = len(shared_codes)
+            g.sync.shared_codes[:n_shared] = shared_codes
+            g.sync.n_shared.value = n_shared
+            if has_op:
+                op, op_code = op_check(kwargs.pop("op", "avg"))
+                g.sync.comm_op.value = op_code
+                args = (*args, op)
+            g.sync.barriers.exec_in.wait()
+            results = list()
+            for idx in shared_codes:
+                results.append(gpu_comm_func(g.shareds[idx].data, *args, **kwargs))
+            g.sync.barriers.exec_out.wait()
+            return results  # (mostly just in case of non-in-place operation)
+        return gpu_comm_procedure
+    return build_comm_procedure
 
 
-@gpu_comm_procedure(BROADCAST)
-def broadcast(idx, root=None):
-    g.gpu_comm.broadcast(src=g.shareds[idx].data, root=root)
-
-@gpu_comm_procedure(REDUCE)
-def reduce(idx, op=None, root=None):
-    if op is None:
-        raise ValueError("Must provide a reduction operation.")
-    g.gpu_comm.reduce(src=g.shareds[idx].data, op=op, root=root)
-
-# TODO: make sure this is coming out right....and then fill in with all the
-# correct call signatures.
+def reduce_func(src, op, in_place=True, dest=None):
+    if in_place:
+        g.gpu_comm.reduce(src=src, op=op, dest=src)
+        return src
+    else:
+        return g.gpu_comm.reduce(src=src, op=op, dest=dest)  # makes a new gpuarray
 
 
-
-# def outer_wrapper(func, comm_code):
-#     def outer_wrapped(*args, **kwargs):
-#         if g.closed:
-#             raise RuntimeError("Cannot call GPU collectives after session closed.")
-#         g.sync.exec_type.value = GPU_COMM
-#         g.sync.exec_code.value = comm_code
-#         func(*args, **kwargs)
-#         g.sync.barriers.exec_out.wait()
-#     return outer_wrapped
-
-# def shared_wrapper(func):
-#     def shared_wrapped(functions=None, shared_names=None, **kwargs):
-#         shared_codes = get_shared_codes(functions, shared_names)
-#         n_shareds = len(shared_codes)
-#         g.sync.shared_codes[:n_shareds] = shared_codes
-#         g.sync.n_shareds.value = n_shareds
-#         g.sync.barriers.exec_in.wait()
-#         for idx in shared_codes:
-#             func(idx, **kwargs)
-#     return shared_wrapped
-
-# @outer_wrapper(BROADCAST)
-# @shared_wrapper
-# def broadcast(idx, root=None):
-#     gpu_comm.broadcast(g.shareds[idx].data, root)
+def all_reduce_func(src, op):
+    g.gpu_comm.all_reduce(src=src, op=op, dest=src)
 
 
+@gpu_comm_function(g.gpu_comm.broadcast, BROADCAST)
 def broadcast(functions=None, shared_names=None):
-    if g.closed:
-        raise RuntimeError("Cannot call GPU collectives after session closed.")
-    g.sync.exec_type.value = GPU_COMM
-    g.sync.exec_code.value = BROADCAST
+    """broadcast docstring"""
+    pass
 
-    shared_codes = get_shared_codes(functions, shared_names)
-    n_shareds = len(shared_codes)
-    g.sync.shared_codes[:n_shareds] = shared_codes
-    g.sync.n_shareds.value = n_shareds  # FIXME: set up shared list?
-    g.sync.barriers.exec_in.wait()
-    for idx in shared_codes:
-        # Here tell the worker what to do and then release it.
-        g.gpu_comm.broadcast(g.shareds[idx].data)
-    g.sync.barriers.exec_out.wait()
+
+@gpu_comm_function(all_reduce_func, ALL_REDUCE, has_op=True)
+def all_reduce(functions=None, shared_names=None, op="avg"):
+    """all_reduce docstring"""
+
+
+@gpu_comm_function(reduce_func, REDUCE, has_op=True)
+def reduce(functions=None, shared_names=None, op="avg", in_place=True, dest=None):
+    """reduce docstring"""
+
+
+@gpu_comm_function(g.gpu_comm.all_gather, ALL_GATHER)
+def all_gather(functions=None, shared_names=None, dest=None, nd_up=1):
+    """all_gather docstring"""
+
+
+###############################################################################
+#
+#                       Initializing and Exiting.
+#
+###############################################################################
+
+
+def close():
+    """
+    It needs to:
+    1. Signal all the workers to quit.
+    2. join() the subprocesses.
+    3. Turn off the gpar functions.
+    """
+    if not g.forked:
+        return
+    elif not g.sync.distributed.value:  # (will be closing due to error)
+        g.sync.barriers.distribute.wait()  # (Workers will know to exit)
+        for p in g.processes:
+            p.join()
+    elif not g.closed:
+        g.sync.quit.value = True
+        g.sync.barriers.exec_in.wait()
+        for p in g.processes:
+            p.join()
+        for gpar_fcn in g.gpar_functions:
+            gpar_fcn._close()  # Turn off all the functions.
+        g.closed = True
 
 
 def fork(n_gpu=None, master_rank=None):
@@ -270,6 +308,9 @@ def fork(n_gpu=None, master_rank=None):
     g.master_rank = master_rank
     g.sync = sync
 
+    import atexit
+    atexit.register(close)
+
     # Initialize disinct GPU.
     util.use_gpu(master_rank)
 
@@ -297,33 +338,14 @@ def distribute_functions():
     with open(PKL_FILE, "wb") as f:
         pickle.dump(g.theano_functions, f, pickle.HIGHEST_PROTOCOL)
 
+    # Make a shared array of ints, size equal to number of shared variables.
+    sync.shared_codes = ShmemRawArray('i', len(g.shareds), SH_ARRAY_TAG)
     gpu_comm, comm_id = util.init_gpu_comm(g.n_gpu, g.master_rank)
     g.sync.dict["comm_id"] = comm_id
+    g.sync.distributed.value = True  # let the workers know this part succeeded
     g.sync.barriers.distribute.wait()  # signal workers to receive & join comm
     Function._gpu_comm = gpu_comm  # endow all functions
     for gpar_fcn in g.gpar_functions:
         gpar_fcn._set_normal_call()
     g.gpu_comm = gpu_comm
     g.distributed = True
-
-
-def close():
-    """
-    TODO: make this happen automatically on exit (but still allow user to call it)
-    Call this in the master at the end of the program.
-
-    It needs to:
-    1. Signal all the workers to quit.
-    2. join() the subprocesses.
-    3. Turn off the gpar functions.
-    """
-    if (not g.forked) or (not g.distributed):
-        raise RuntimeError("Cannot close before forking and distributing.")
-    if not g.closed:
-        g.sync.quit.value = True
-        g.sync.barriers.exec_in.wait()
-        for p in g.processes:
-            p.join()
-        for gpar_fcn in g.gpar_functions:
-            gpar_fcn._close()  # Turn off all the functions.
-        g.closed = True

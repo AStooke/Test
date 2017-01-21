@@ -5,12 +5,12 @@ Still a question....how to write these without refering to h; sync
 
 import numpy as np
 
-from constants import FUNCTION, MASTER_RANK
+from util import FUNCTION, MASTER_RANK
 
 
 class BaseFunction(object):
 
-    _gpu_comm = None
+    _gpu_comm = None  # will be endowed later
     _sync = None
 
     def __init__(self,
