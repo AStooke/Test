@@ -6,9 +6,9 @@ Test Intel vector math function speed
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "mkl.h"
-// #include "amdlibm.h"
 #include <time.h>
+#include "mkl.h"
+
 #define PREC 10000000
 #define MAXVEC 1000000
 #define ALIGN 64
@@ -17,7 +17,7 @@ int vecsize = 1000;  // length of vector to compute on
 int loops = 1000;   // number of times to compute each complete vector
 float min = 0;     // use uniform dist between (min,max), affects math funcs
 float max = 1;
-int memalign = 0;  // boolean, whether to align vectory memory to cache
+int memalign = 1;  // boolean, whether to align vectory memory to cache
 int warmup = 1;  // boolean, whether to perform warmup run of each computation
 
 
@@ -125,7 +125,7 @@ int main(int argc, char** argv)
     }
 
     printf("Performing this many loops: %d\n", loops);
-    printf("On vectors of length: %d\n", vecsize);
+    printf("On a vector of length: %d\n", vecsize);
     printf("Using random numbers between (%f, %f)\n", min, max);
     printf("Memory Aligned: %s\n", memalign > 0 ? "Yes" : "No");
     printf("Pre-timing warmup loops: %s\n\n", warmup > 0 ? "Yes" : "No");

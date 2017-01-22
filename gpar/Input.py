@@ -1,0 +1,18 @@
+
+
+class Input(object):
+
+    def __init__(self, name, mp_array, max_shape, typecode):
+        self.name = name
+        self.mp_array = mp_array
+        self.max_shape = max_shape
+        self.typecode = typecode
+
+    def assign_indeces(self, n_gpu):
+        batch_size = self.max_shape[0]
+        assert batch_size >= n_gpu
+        worker_size = -(-batch_size // n_gpu)  # (ceiling division)
+        boundaries = [worker_size * i for i in range(n_gpu + 1)]
+        boundaries[-1] = batch_size
+        self.worker_indeces = tuple(
+            (boundaries[i], boundaries[i + 1]) for i in range(n_gpu))
