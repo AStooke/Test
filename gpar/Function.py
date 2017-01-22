@@ -16,15 +16,15 @@ class BaseFunction(object):
     def __init__(self,
                  name,
                  theano_function,
-                 mp_inputs,
-                 outputs_to_cpu,
+                 input_codes,
                  shared_codes,
+                 outputs_to_cpu,
                  mp_indeces,  # probably get rid of this..make it dynamic
                  ):
         self._name = name
         self._theano_function = theano_function
+        self._input_codes = input_codes
         self._shared_codes = shared_codes  # (tuple)
-        self._mp_inputs = mp_inputs  # (tuple)
         self._outputs_to_cpu = outputs_to_cpu
         self._s_ind = mp_indeces[0]
         self._e_ind = mp_indeces[1]
@@ -36,10 +36,6 @@ class BaseFunction(object):
     @property
     def theano_function(self):
         return self._theano_function
-
-    @property
-    def shared_names(self):
-        return self._shared_names
 
     @property
     def outputs_to_cpu(self):

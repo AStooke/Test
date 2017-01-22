@@ -30,10 +30,10 @@ g = struct(
     sync=None,
     processes=list(),
     # Theano
-    n_inputs=0,
-    inputs=list(),
-    shareds=list(),
-    named_shareds=dict(),
+    inputs=list(),  # list of shmemarray objects
+    named_inputs=dict(),  # name --> position in list
+    shareds=list(),  # list of theano.link.Container objects
+    named_shareds=dict(),  # name --> position in list
     theano_functions=list(),
     # GPU
     gpar_functions=list(),
@@ -92,7 +92,7 @@ def function(inputs, outputs=None, updates=None, name=None):
     # multiprocessing shared memory with this function.
     # mp_inputs, worker_indeces = handling.inputs_handling(inputs)
 
-    input_codes, g.n_inputs = handling.register_inputs(inputs, g.n_inputs, g.named_inputs)
+    fcn_input_codes = handling.register_inputs(inputs, g.inputs, g.named_inputs)
 
     # Keep the outputs on the GPU; remember which to eventually send to CPU.
     gpu_outputs, outputs_to_cpu = handling.gpu_outputs(outputs)
@@ -111,7 +111,7 @@ def function(inputs, outputs=None, updates=None, name=None):
 
     gpar_function = Function(name=name,
                              theano_function=theano_function,
-                             input_codes=input_codes,
+                             input_codes=fcn_input_codes,
                              outputs_to_cpu=outputs_to_cpu,
                              shared_codes=shared_codes,
                              mp_indeces=worker_indeces[0],
@@ -302,16 +302,15 @@ def fork(n_gpu=None, master_rank=None):
     for p in g.processes:
         p.start()
 
+    import atexit
+    atexit.register(close)
+    
     Function._sync = sync  # endow all functions
     g.forked = True
     g.n_gpu = n_gpu
     g.master_rank = master_rank
     g.sync = sync
 
-    import atexit
-    atexit.register(close)
-
-    # Initialize disinct GPU.
     util.use_gpu(master_rank)
 
 

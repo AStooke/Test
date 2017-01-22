@@ -2,11 +2,21 @@
 
 class Input(object):
 
-    def __init__(self, name, mp_array, max_shape, typecode):
+    def __init__(self, 
+                 code, 
+                 name=None, 
+                 shmem_array=None, 
+                 max_shape=None, 
+                 typecode=None, 
+                 shmem_tag=None,
+                 ):
         self.name = name
-        self.mp_array = mp_array
-        self.max_shape = max_shape
+        self.data = shmem_array
+        self.shape = max_shape
         self.typecode = typecode
+        self.tag = shmem_tag
+        self.code = code
+
 
     def assign_indeces(self, n_gpu):
         batch_size = self.max_shape[0]

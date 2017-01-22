@@ -2,29 +2,31 @@
 Helper functions for setting up variables and functions.
 """
 
+from Input import Input
 
-def inputs_handling(inputs, global_inputs):
-    """
-    Ensure that each input was previously registered with gpar by name matching.
-    Associate these names with the function so that it knows which
-    multiprocessing shared variables to use.
-    """
-    mp_inputs = list()
-    worker_indeces = None
-    for inpt in inputs:
-        if inpt.name is None:
-            raise ValueError("Naming of theano input variables is required.")
-        for g_inpt in global_inputs:
-            if g_inpt.name == inpt.name:
-                mp_inputs.append(g_inpt.mp_array)
-                if worker_indeces is None:
-                    worker_indeces = g_inpt.worker_indeces
-                elif worker_indeces != g_inpt.worker_indeces:
-                    raise ValueError("Different worker indeces for different inputs to same function.")
-                break
-        else:
-            raise ValueError("Theano input variable had no recognized gpar input variable (matching by name).")
-    return tuple(mp_inputs), worker_indeces
+
+# def inputs_handling(inputs, global_inputs):
+#     """
+#     Ensure that each input was previously registered with gpar by name matching.
+#     Associate these names with the function so that it knows which
+#     multiprocessing shared variables to use.
+#     """
+#     mp_inputs = list()
+#     worker_indeces = None
+#     for inpt in inputs:
+#         if inpt.name is None:
+#             raise ValueError("Naming of theano input variables is required.")
+#         for g_inpt in global_inputs:
+#             if g_inpt.name == inpt.name:
+#                 mp_inputs.append(g_inpt.mp_array)
+#                 if worker_indeces is None:
+#                     worker_indeces = g_inpt.worker_indeces
+#                 elif worker_indeces != g_inpt.worker_indeces:
+#                     raise ValueError("Different worker indeces for different inputs to same function.")
+#                 break
+#         else:
+#             raise ValueError("Theano input variable had no recognized gpar input variable (matching by name).")
+#     return tuple(mp_inputs), worker_indeces
 
 
 def gpu_outputs(outputs):
@@ -54,22 +56,23 @@ def gpu_outputs(outputs):
             return outputs, outputs_to_cpu
 
 
-def register_inputs(inputs, previous_n_inputs, global_named_inputs):
+def register_inputs(inputs, global_inputs, global_named_inputs):
     fcn_input_codes = list()
-    new_n_inputs = previous_n_inputs
     for inpt in inputs:
         if inpt.name is None:
-            fcn_input_codes.append(new_n_inputs)
-            new_n_inputs += 1
+            new_code = len(global_inputs)
+            global_inputs.append(Input(new_code))
+            fcn_input_codes.append(new_code)
             raise RuntimeWarning("Gpar encountered un-named input: shared memory management is improved if inputs used in multiple functions are named.")
         else:
             if inpt.name in global_named_inputs:
                 fcn_input_codes.append(global_named_inputs[inpt.name])
             else:
-                fcn_input_codes.append(new_n_inputs)
-                global_named_inputs[inpt.name] = new_n_inputs
-                new_n_inputs += 1
-    return tuple(fcn_input_codes), new_n_inputs
+                new_code = len(global_inputs)
+                global_inputs.append(Input(new_code, inpt.name))
+                fcn_input_codes.append(new_code)
+                global_named_inputs[inpt.name] = new_code
+    return tuple(fcn_input_codes)
 
 
 def register_shareds(theano_function, global_shareds, global_named_shareds):
