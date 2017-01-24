@@ -1,6 +1,9 @@
 
 import multiprocessing as mp
+import ctypes
+import os
 
+PID = str(os.getpid())
 
 MASTER_RANK = 0  # default if none other selected
 
@@ -18,7 +21,11 @@ ALL_GATHER = 3
 # (possibly need to make this secure somehow?)
 PKL_FILE = "function_dump.pkl"
 
-SH_ARRAY_TAG = "active_shared_variable_shared_array_tag"  # (shouldn't be a conflict!)
+SH_ARRAY_TAG = "/synk_" + PID + "_active_theano_shareds"  # (shouldn't be a conflict!)
+INPUT_TAG_CODES_TAG = "/synk_" + PID + "_input_tag_codes"
+ASGN_IDX_TAG = "/synk_" + PID + "_assign_idx"
+SHMEM_TAG_PRE = "/synk_" + PID + "_"
+
 
 OPS = {"+": 0,
        "sum": 0,
@@ -40,6 +47,20 @@ WORKER_OPS = {0: "sum",
               3: "min",
               4: "avg",
               }
+
+NP_TO_C_TYPE = {'float64': ctypes.c_double,
+                'float32': ctypes.c_float,
+                'float16': None,
+                'int8': ctypes.c_byte,
+                'int16': ctypes.c_short,
+                'int32': ctypes.c_int,
+                'int64': ctypes.c_longlong,
+                'uint8': ctypes.c_ubyte,
+                'uint16': ctypes.c_ushort,
+                'uint32': ctypes.c_uint,
+                'uint64': ctypes.c_ulonglong,
+                'bool': ctypes.c_bool,
+                }
 
 
 class struct(dict):
@@ -130,6 +151,3 @@ def use_gpu(rank):
     dev_str = "cuda" + str(rank)
     import theano.gpuarray
     theano.gpuarray.use(dev_str)
-
-
-

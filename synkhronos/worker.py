@@ -23,6 +23,49 @@ def get_op(sync, op_code):
         raise NotImplementedError
 
 
+class Function(SynkFunction):
+
+    sync = None
+    gpu_comm = None
+    master_rank = None
+
+    def __call__(self):
+        """
+        This needs to:
+        1. Gather the right inputs from mp shared values.
+        2. Execute local theano function on those inputs.
+        3. Send results back to master.
+
+        NOTE: Barriers happen OUTSIDE worker function call.
+        """
+        inputs = self._receive_inputs()
+        results = self._call_theano_function(inputs)
+        self._send_results(results)
+
+    def _receive_inputs(self):
+        my_inputs = list()
+        my_idx = (self.sync.assign_idx[self.rank],
+            self.sync.assign_idx[self.rank + 1])
+        for inpt in self.input_shmems
+
+
+
+
+        for inpt in self.mp_inputs:
+            my_inputs.append(inpt[self.s_ind:self.e_ind])  # a view
+        return my_inputs
+
+    def _send_results(self, results):
+        if isinstance(results, (list, tuple)):
+            for r in results:
+                self._gpu_comm.reduce(r, 'sum', root=self.master_rank)
+        else:
+            self._gpu_comm.reduce(r, 'sum', root=self.master_rank)
+
+
+
+
+
 def worker_exec(rank, n_gpu, master_rank, sync, inputs):
     """
     This is the function the subprocess is set to run.
@@ -45,9 +88,9 @@ def worker_exec(rank, n_gpu, master_rank, sync, inputs):
     if not sync.distributed.value:
         return  # (master closed before distributing functions--an error)
     gpu_comm = util.init_gpu_comm(n_gpu, rank, sync.dict["comm_id"])
-    WorkerFunction.master_rank = master_rank
-    WorkerFunction._sync = sync  # endow all functions
-    WorkerFunction._gpu_comm = gpu_comm
+    Function.master_rank = master_rank
+    Function._sync = sync  # endow all functions
+    Function._gpu_comm = gpu_comm
     with open(PKL_FILE, "rb") as f:
         theano_functions = pickle.load(f)  # should be all in one list
     # Might have the last worker delete the pkl file.
