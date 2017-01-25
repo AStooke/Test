@@ -1,21 +1,23 @@
 
+from util import NP_TO_C_TYPE
+
 
 class Input(object):
 
-    def __init__(self, 
-                 code, 
-                 name=None, 
-                 shmem_array=None, 
-                 max_shape=None, 
-                 typecode=None, 
-                 shmem_tag=None,
+    def __init__(self,
+                 code,
+                 dtype,
+                 name=None,
+                 shape=None,
+                 shmem_array=None,
                  ):
-        self.name = name
-        self.data = shmem_array
-        self.shape = max_shape
-        self.typecode = typecode
-        self.tag = shmem_tag
         self.code = code
+        self.ctype = NP_TO_C_TYPE.get(dtype, None)
+        if self.ctype is None:
+            raise TypeError("Numpy/Theano type: ", dtype, " not supported.")
+        self.name = name
+        self.np_array = shmem_array
+        self.shmem_tag = code
 
 
     def assign_indeces(self, n_gpu):

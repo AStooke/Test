@@ -27,19 +27,19 @@ ASGN_IDX_TAG = "/synk_" + PID + "_assign_idx"
 SHMEM_TAG_PRE = "/synk_" + PID + "_"
 
 
-OPS = {"+": 0,
-       "sum": 0,
-       "add": 0,
-       "*": 1,
-       "prod": 1,
-       "product": 1,
-       "max": 2,
-       "maximum": 2,
-       "min": 3,
-       "minimum": 3,
-       "avg": 4,
-       "average": 4,
-       }
+REDUCE_OPS = {"+": 0,
+              "sum": 0,
+              "add": 0,
+              "*": 1,
+              "prod": 1,
+              "product": 1,
+              "max": 2,
+              "maximum": 2,
+              "min": 3,
+              "minimum": 3,
+              "avg": 4,
+              "average": 4,
+              }
 
 WORKER_OPS = {0: "sum",
               1: "prod",
@@ -62,12 +62,56 @@ NP_TO_C_TYPE = {'float64': ctypes.c_double,
                 'bool': ctypes.c_bool,
                 }
 
+COLLECT_MODES = ["reduce", "gather"]
+
 
 class struct(dict):
 
     def __init__(self, **kwargs):
         dict.__init__(self, kwargs)
         self.__dict__ = self
+
+
+class Inputs(struct):
+
+    def __init__(self, **kwargs):
+        super(Inputs).__init__(self, **kwargs)
+        self.shmems = list()  # numpy arrays wrapping shared memory
+        self.names = list()  # strings (None if no name given)
+        self.ctypes = list()  # ctypes needed for making shared array
+        self.tags = list()  # current tag used for shared memory array
+        self.num = 0
+
+    def append(self, store):
+        code = self.num
+        self.names.append(store.name)
+        if store.name is None:
+            raise RuntimeWarning("Synkhronos encountered un-named input; shared memory management is improved if inputs used in multiple functions are named.")
+        c_type = NP_TO_C_TYPE.get(store.type.dtype, None)
+        if c_type is None:
+            raise TypeError("Numpy/Theano type: ", store.type.dtype, " not supported.")
+        self.ctypes.append(c_type)
+        self.tags.append(code)
+        self.shmems.append(None)
+        self.num += 1
+        return code
+
+
+class Shareds(struct):
+
+    def __init__(self, **kwargs):
+        super(Shareds).__init__(self, **kwargs)
+        self.gpuarrays = list()
+        self.names = list()
+        self.num = 0
+
+    def append(self, store):
+        code = self.num
+        self.names.append(store.name)
+        assert store.data is not None
+        self.gpuarrays.append(store.data)
+        self.num += 1
+        return code
 
 
 def init_gpu_comm(n_gpu, rank, comm_id=None):
@@ -91,7 +135,7 @@ def n_gpu_getter(mp_n_gpu):
     Call in a subprocess because it prevents future subprocesses from using GPU.
     """
     from pygpu import gpuarray
-    mp_n_gpu.value = gpuarray.count_devices('cuda', 0)
+    mp_n_gpu.value = gpuarray.count_devices("cuda", 0)
 
 
 def n_gpu(n_gpu, master_rank):
@@ -109,12 +153,10 @@ def n_gpu(n_gpu, master_rank):
         p.start()
         p.join()
         n_gpu = mp_n_gpu.value
-        if n_gpu == -1:
-            raise ImportError("Unable to import pycuda to detect GPU count.")
-        elif n_gpu == 0:
-            raise RuntimeError("No GPU detected by pycuda.")
+        if n_gpu == 0:
+            raise RuntimeError("No cuda GPU detected by pygpu.")
         elif n_gpu == 1:
-            raise RuntimeWarning("Only one GPU detected; undetermined behavior (but I should make it revert to regular Theano)")
+            raise RuntimeWarning("Only one GPU detected; undetermined behavior (but I could make it revert to regular Theano?)")
         else:
             print("Detected and attempting to use {} GPUs.".format(n_gpu))
 
@@ -151,3 +193,23 @@ def use_gpu(rank):
     dev_str = "cuda" + str(rank)
     import theano.gpuarray
     theano.gpuarray.use(dev_str)
+
+
+def check_collect(collect_mode, reduce_op):
+    if collect_mode not in COLLECT_MODES:
+        raise ValueError("Unrecognized collect_mode: ", collect_mode)
+    if collect_mode == "reduce":
+        if reduce_op not in REDUCE_OPS:
+            raise ValueError("Unrecognized reduce_op: ", reduce_op)
+    else:
+        reduce_op = None
+    return reduce_op
+
+
+def check_op(op):
+    if op not in REDUCE_OPS:
+        raise ValueError("Unrecognized reduction operator: ", op,
+            ", must be one of: ", [k for k in REDUCE_OPS.keys()])
+    elif op in ["avg", "average"]:
+        raise NotImplementedError
+    return op, REDUCE_OPS[op]
