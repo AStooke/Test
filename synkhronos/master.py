@@ -10,16 +10,11 @@ import multiprocessing as mp
 import theano
 import functools
 
-
-from Function import SynkFunction
-import util
-import handling
-from util import struct, Inputs, Shareds
-from util import check_collect, check_op
-from util import (FUNCTION, GPU_COMM, BROADCAST, REDUCE, ALL_REDUCE, ALL_GATHER,
-                  PKL_FILE, REDUCE_OPS, SH_ARRAY_TAG, INPUT_TAG_CODES_TAG,
-                  ASGN_IDX_TAG, SHMEM_TAG_PRE, COLLECT_MODES)
-from shmemarray import ShmemRawArray
+from common import struct, Inputs, Shareds, SynkFunction
+from common import (use_gpu, init_gpu_comm, register_inputs, build_vars_sync,
+                    allocate_shmem)
+from common import (PKL_FILE, FUNCTION, GPU_COMM, BROADCAST, REDUCE, ALL_REDUCE,
+                    ALL_GATHER, COLLECT_MODES, REDUCE_OPS)
 
 
 # globals
@@ -44,36 +39,32 @@ g = struct(
 
 
 ###############################################################################
-#
-#                           Building Functions.
-#
+#                                                                             #
+#                           Building Functions.                               #
+#                                                                             #
 ###############################################################################
 
 
-def alloc_write_shmem(input_arg, input_code):
+def alloc_write_shmem(input_arg, input_ID):
     shape = list(input_arg.shape)
-    shape[0] = int(np.ceil(shape[0] * 1.05))  # (a little extra)
-    # FIXME: this is possibly a bad idea, might hit some max length for tag code?
-    tag_code = np.max(g.sync.input_tag_codes) + 1
-    shmem = np.ctypeslib.as_array(ShmemRawArray(g.inputs.ctypes[input_code],
-                                                int(np.prod(shape)),
-                                                SHMEM_TAG_PRE + str(tag_code),
-                                                )
-                                  ).reshape(shape)
-    shmem[:input_arg.shape[0]] = input_arg  # (copy arg data into shared memory buffer)
-    g.sync.input_tag_codes[input_code] = tag_code
-    g.inputs.shmems[input_code] = shmem
-    g.inputs.tags[input_code] = tag_code
+    shape[0] = int(np.ceil(shape[0] * 1.05))  # ( a little extra)
+    tag_ID = np.max(g.sync.input_tag_IDs) + 1
+    shmem = allocate_shmem(input_ID, g.inputs, shape, tag_ID)
+    shmem[:input_arg.shape[0]] = input_arg  # (copy arg data into shared buffer)
+    g.sync.input_tag_IDs[input_ID] = tag_ID
+    return shmem
 
 
 class Function(SynkFunction):
 
-    def __init__(self, outputs_to_cpu, *args, **kwargs):
+    def __init__(self, outputs_to_cpu, input_names, *args, **kwargs):
         super(Function).__init__(*args, **kwargs)
         self._call = self._pre_distributed_call
         self._outputs_to_cpu = outputs_to_cpu
+        self._input_names = input_names
         self._previous_batch_size = None
         self._my_idx = None
+        self._n_inputs = len(self._input_IDs)
 
     def __call__(self, *args, **kwargs):
         self._call(*args, **kwargs)  # What this refers to is set dynamically
@@ -88,46 +79,74 @@ class Function(SynkFunction):
     def _close(self):
         self._call = self._closed_call
 
-    def _share_inputs(self, args):
-        if not args:
-            return
-        my_inputs = list()
-        assert isinstance(args, (tuple, list))
-        batch_size = args[0].shape[0]
-        for arg in args:
-            if arg.shape[0] != batch_size:
+    def _order_inputs(self, *args, **kwargs):
+        ordered_inputs = list(args)
+        if not kwargs:
+            output_subset = None
+        else:
+            output_subset = kwargs.pop("output_subset", None)
+            if output_subset is not None:
+                raise NotImplementedError
+            ordered_inputs += [None] * len(kwargs)
+            try:
+                for name, val in kwargs.iteritems():
+                    ordered_inputs[self._input_names.index(name)] = val
+            except ValueError as e:
+                raise e("Input passed as keyword arg not found in input names of function.")
+        if len(ordered_inputs) != self._n_inputs:
+            raise TypeError("Incorrect number of inputs to synkhronos function.")
+        return ordered_inputs, output_subset
+
+    def _update_batch_size(self, ordered_inputs):
+        batch_size = ordered_inputs[0].shape[0]
+        for inpt in ordered_inputs[1:]:
+            if inpt.shape[0] != batch_size:
                 raise ValueError("Inputs of different batch sizes (using 0-th index).")
         if batch_size != self._previous_batch_size:
-            self._update_batch_size(batch_size)
-        for arg, inpt_code in zip(args, self._input_codes):
-            shmem = g.inputs.shmems[inpt_code]
-            if shmem is None:
-                alloc_write_shmem(arg, inpt_code)
-            else:
-                # check if they are already the same memory (based on first element)
-                arg_addr, _ = arg.__array_interface__["data"]
-                shmem_addr, _ = shmem.__array_interface__["data"]
-                if arg_addr == shmem_addr:
-                    if arg.__array_interface__["strides"] is not None:
-                        raise ValueError("Cannot accept strided view of existing shared memory as input.")
-                else:
-                    if arg.shape[1:] != shmem.shape[1:] or batch_size > shmem.shape[0]:
-                        # new shape or bigger batch
-                        alloc_write_shmem(arg, inpt_code)
-                    else:
-                        shmem[:batch_size] = arg  # already enough shared memory
-            my_inputs.append(arg[self._my_idx[0]:self._my_idx[1]])
-        return my_inputs
+            assign_idx = np.ceil(np.linspace(0, batch_size, g.n_gpu + 1)).astype(int)
+            g.sync.assign_idx[self._ID, :] = assign_idx
+            self._my_idx = (assign_idx[g.master_rank], assign_idx[g.master_rank + 1])
+            self._previous_batch_size = batch_size
 
-    def _update_batch_size(self, batch_size):
-        assign_idx = np.ceil(np.linspace(0, batch_size, g.n_gpu + 1)).astype(int)
-        g.sync.assign_idx[self._code, :] = assign_idx
-        self._my_idx = (assign_idx[g.master_rank], assign_idx[g.master_rank + 1])
-        self._previous_batch_size = batch_size
+    def _update_shmem(self, inpt, inpt_ID):
+        shmem = g.inputs.shmems[inpt_ID]
+        if shmem is None:
+            shmem = alloc_write_shmem(inpt, inpt_ID)
+        else:
+            # check if they are already the same memory (based on first element)
+            inpt_addr, _ = inpt.__array_interface__["data"]
+            shmem_addr, _ = shmem.__array_interface__["data"]
+            if inpt_addr == shmem_addr:
+                if inpt.__array_interface__["strides"] is not None:
+                    raise ValueError("Cannot accept strided view of existing shared memory as input.")
+            else:
+                if inpt.shape[1:] != shmem.shape[1:] or inpt.shape[0] > shmem.shape[0]:
+                    # new shape or bigger batch
+                    shmem = alloc_write_shmem(inpt, inpt_ID)
+                else:
+                    shmem[:inpt.shape[0]] = inpt  # already enough shared memory
+        return shmem
+
+    def _share_inputs(self, *args, **kwargs):
+        """
+        Can separately be used to allocate, write, and return input shared
+        memory arrays without executing the function.
+        """
+        if not args and not kwargs:
+            return None, None, None
+        ordered_inputs, output_subset = self._order_inputs(*args, **kwargs)
+        self._update_batch_size(ordered_inputs)
+        my_inputs = list()
+        input_shmems = list()
+        for inpt, inpt_ID in zip(ordered_inputs, self._input_IDs):
+            shmem = self._update_shmem(inpt, inpt_ID)
+            my_inputs.append(shmem[self._my_idx[0]:self._my_idx[1]])
+            input_shmems.append(shmem)
+        return tuple(my_inputs), output_subset, input_shmems
 
     def _set_worker_signal(self):
         self._sync.exec_type.value = FUNCTION
-        self._sync.func_code.value = self._code
+        self._sync.func_ID.value = self._ID
         self._sync.barriers.exec_in.wait()
 
     def _reduce_results(self, my_results):
@@ -148,7 +167,7 @@ class Function(SynkFunction):
     def _pre_distributed_call(self, *args):
         raise RuntimeError("Synkhronos functions have not been distributed to workers, can only call Theano function.")
 
-    def _synk_call(self, *inputs):
+    def _synk_call(self, *args, **kwargs):
         """
         This needs to:
         1. Share input data.
@@ -157,17 +176,33 @@ class Function(SynkFunction):
         4. Collect result from workers and return it.
 
         NOTE: Barriers happen INSIDE master function call.
-        FIXME: handle kwargs?
         """
-        my_inputs = self._share_inputs(inputs)
+        return_shmems = kwargs.pop("return_shmems", False)
+        my_inputs, output_subset, input_shmems = self._share_inputs(*args, **kwargs)  # ugh now i have to get the right index
         self._set_worker_signal()
-        my_results = self._call_theano_function(my_inputs)  # always a tuple
+        my_results = self._call_theano_function(my_inputs, output_subset)  # always a list
         results = self._collect_results(my_results)  # returns a list
         for idx in [i for i, val in enumerate(self.outputs_to_cpu) if val]:
             results[idx] = np.array(results[idx])
-        results = results[0] if len(results) == 1 else tuple(results)
         self._sync.barriers.exec_out.wait()  # NOTE: Not sure if keeping this--yes
+        if return_shmems:
+            results += input_shmems  # append the list of results with tuple of shmems
+        if len(results) == 1:
+            results = results[0]
         return results
+
+    def get_input_shmems(self, *args, **kwargs):
+        if self._call is not self._synk_call:
+            raise RuntimeError("Cannot call this method on inactive synkhronos function.")
+        input_shmems = list()
+        if not args and not kwargs:
+            # gather existing
+            for inpt_ID in self._input_IDs:
+                input_shmems.append(g.inputs.shmems[inpt_ID])
+        else:
+            # make new ones according to inputs
+            _, _, input_shmems = self._share_inputs(*args, **kwargs)
+        return input_shmems
 
 
 def function(inputs, outputs=None, updates=None, name=None,
@@ -190,7 +225,7 @@ def function(inputs, outputs=None, updates=None, name=None,
     reduce_op = check_collect(collect_mode, reduce_op)
 
     # Keep the outputs on the GPU; remember which to eventually send to CPU.
-    gpu_outputs, outputs_to_cpu = handling.gpu_outputs(outputs)
+    gpu_outputs, outputs_to_cpu = vars_as_gpu(outputs)
 
     # TODO: Probably still need to do something about updates and givens.
     theano_function = theano.function(inputs=inputs,
@@ -199,13 +234,16 @@ def function(inputs, outputs=None, updates=None, name=None,
                                       name=name,
                                       )
     g.theano_functions.append(theano_function)
-    input_codes, shared_codes = handling.register_inputs(theano_function,
-                                                         g.inputs, g.shareds)
+    input_IDs, shared_IDs, input_names = register_inputs(theano_function,
+                                                         g.inputs,
+                                                         g.shareds,
+                                                         )
     synk_function = Function(name=name,
-                             code=len(g.synk_functions),  # Fcn can ID itself...?
+                             ID=len(g.synk_functions),  # Fcn can ID itself...?
                              theano_function=theano_function,
-                             input_codes=input_codes,
-                             shared_codes=shared_codes,
+                             input_IDs=input_IDs,
+                             input_names=input_names,
+                             shared_IDs=shared_IDs,
                              outputs_to_cpu=outputs_to_cpu,
                              collect_mode=collect_mode,
                              reduce_op=reduce_op
@@ -215,17 +253,17 @@ def function(inputs, outputs=None, updates=None, name=None,
 
 
 ###############################################################################
-#
-#                      GPU Collectives.
-#
+#                                                                             #
+#                      GPU Collectives.                                       #
+#                                                                             #
 ###############################################################################
 
 
-def get_shared_codes(synk_functions=None, shared_names=None):
+def get_shared_IDs(synk_functions=None, shared_names=None):
     if synk_functions is None and shared_names is None:
         return tuple(range(g.shareds.num))  # default is all shareds
     else:
-        # All type and existence checking.
+        # Type and existence checking.
         if not isinstance(synk_functions, (list, tuple)):
             synk_functions = (synk_functions,)
         for synk_fcn in synk_functions:
@@ -237,34 +275,34 @@ def get_shared_codes(synk_functions=None, shared_names=None):
             if name not in g.shareds.names:
                 raise ValueError("Unrecognized name for shared variable: ", name)
 
-        shared_codes = list()
+        shared_IDs = list()
         for synk_fcn in synk_functions:
-            shared_codes += synk_fcn.shared_codes
+            shared_IDs += synk_fcn.shared_IDs
         for name in shared_names:
-            shared_codes.append(g.shareds.names.index(name))
-    return tuple(sorted(set(shared_codes)))
+            shared_IDs.append(g.shareds.names.index(name))
+    return tuple(sorted(set(shared_IDs)))
 
 
-def gpu_comm_function(gpu_comm_func, comm_code, has_op=False):
+def gpu_comm_function(gpu_comm_func, comm_ID, has_op=False):
     def build_comm_procedure(f):
-        @functools.wraps(f)
-        def gpu_comm_procedure(*args, functions=None, shared_names=None, **kwargs):
+        @functools.wraps(f)  # (preserves signature and docstring of wrapped)
+        def gpu_comm_procedure(functions=None, shared_names=None, op=None, **kwargs):
             if g.closed:
                 raise RuntimeError("synk already closed--cannot call comm function.")
             g.sync.exec_type = GPU_COMM
-            g.sync.comm_code = comm_code
-            shared_codes = get_shared_codes(functions, shared_names)
-            n_shared = len(shared_codes)
-            g.sync.shared_codes[:n_shared] = shared_codes
+            g.sync.comm_ID = comm_ID
+            shared_IDs = get_shared_IDs(functions, shared_names)
+            n_shared = len(shared_IDs)
+            g.sync.shared_IDs[:n_shared] = shared_IDs
             g.sync.n_shared.value = n_shared
             if has_op:
-                op, op_code = check_op(kwargs.pop("op", "avg"))
-                g.sync.comm_op.value = op_code
-                args = (*args, op)
+                op_ID = check_op(op)
+                kwargs["op"] = op
+                g.sync.comm_op.value = op_ID
             g.sync.barriers.exec_in.wait()
             results = list()
-            for idx in shared_codes:
-                r = gpu_comm_func(g.shareds.gpuarrays[idx], *args, **kwargs)
+            for idx in shared_IDs:
+                r = gpu_comm_func(g.shareds.gpuarrays[idx], **kwargs)
                 results.append(r)
             g.sync.barriers.exec_out.wait()
             return results  # (mostly just in case of non-in-place operation)
@@ -283,6 +321,7 @@ def reduce_func(src, op, in_place=True, dest=None):
 def all_reduce_func(src, op):
     # workers can't get new arrays, so everyone (including master) will overwrite src
     g.gpu_comm.all_reduce(src, op=op, dest=src)
+    return src
 
 
 @gpu_comm_function(g.gpu_comm.broadcast, BROADCAST)
@@ -294,22 +333,25 @@ def broadcast(functions=None, shared_names=None):
 @gpu_comm_function(all_reduce_func, ALL_REDUCE, has_op=True)
 def all_reduce(functions=None, shared_names=None, op="avg"):
     """all_reduce docstring"""
+    pass
 
 
 @gpu_comm_function(reduce_func, REDUCE, has_op=True)
 def reduce(functions=None, shared_names=None, op="avg", in_place=True, dest=None):
     """reduce docstring"""
+    pass
 
 
 @gpu_comm_function(g.gpu_comm.all_gather, ALL_GATHER)
 def all_gather(functions=None, shared_names=None, dest=None, nd_up=1):
     """all_gather docstring"""
+    pass
 
 
 ###############################################################################
-#
-#                       Initializing and Exiting.
-#
+#                                                                             #
+#                       Initializing and Exiting.                             #
+#                                                                             #
 ###############################################################################
 
 
@@ -336,7 +378,7 @@ def close():
         g.closed = True
 
 
-def fork(n_gpu=None, master_rank=None):
+def fork(n_gpu=None, master_rank=0):
     """
     Call this in the master process at the very beginning (possibly before
     importing theano, in order to use different GPUs)
@@ -359,8 +401,8 @@ def fork(n_gpu=None, master_rank=None):
         raise RuntimeError("Only fork once.")
     from worker import worker_exec
 
-    n_gpu, master_rank = util.n_gpu(n_gpu, master_rank)
-    sync = util.build_sync(n_gpu)
+    n_gpu, master_rank = n_gpu(n_gpu, master_rank)
+    sync = build_sync(n_gpu)
 
     for rank in [r for r in range(n_gpu) if r != master_rank]:
         args = (rank, n_gpu, master_rank, sync)
@@ -376,7 +418,7 @@ def fork(n_gpu=None, master_rank=None):
     g.master_rank = master_rank
     g.sync = sync
 
-    util.use_gpu(master_rank)
+    use_gpu(master_rank)
 
 
 def distribute_functions():
@@ -402,18 +444,118 @@ def distribute_functions():
     with open(PKL_FILE, "wb") as f:
         pickle.dump(g.theano_functions, f, pickle.HIGHEST_PROTOCOL)
 
-    g.sync.shared_codes = ShmemRawArray('i', g.shareds.num, SH_ARRAY_TAG)
-    g.sync.input_tag_codes = ShmemRawArray('i', g.inputs.num, INPUT_TAG_CODES_TAG)
-    asgn_rows = len(g.functions)
-    asgn_cols = g.n_gpu + 1
-    g.sync.assign_idx = np.ctypeslib.as_array(ShmemRawArray(
-        'i', asgn_rows * asgn_cols, ASGN_IDX_TAG)
-        ).reshape((asgn_rows, asgn_cols))
-    gpu_comm, comm_id = util.init_gpu_comm(g.n_gpu, g.master_rank)
-    g.sync.dict["comm_id"] = comm_id
+    g.sync.vars = build_vars_sync(g.inputs, g.shareds, len(g.functions), g.n_gpu)
+    gpu_comm, comm_id = init_gpu_comm(g.n_gpu, g.master_rank)
+    g.sync.dict["comm_id"] = comm_id  # workers need this to join gpu comm clique
     g.sync.distributed.value = True  # let the workers know this part succeeded
     g.sync.barriers.distribute.wait()  # signal workers to receive & join comm
     for synk_fcn in g.synk_functions:
         synk_fcn._set_normal_call()
     g.gpu_comm = gpu_comm
     g.distributed = True
+
+
+###############################################################################
+#                                                                             #
+#                       Utilities (no accesses to global g)                   #
+#                                                                             #
+###############################################################################
+
+
+def n_gpu_getter(mp_n_gpu):
+    """
+    Call in a subprocess because it prevents future subprocesses from using GPU.
+    """
+    from pygpu import gpuarray
+    mp_n_gpu.value = gpuarray.count_devices("cuda", 0)
+
+
+def n_gpu(n_gpu, master_rank):
+    if n_gpu is not None:
+        n_gpu = int(n_gpu)
+    master_rank = int(master_rank)
+
+    if n_gpu is None:
+        #  Detect the number of devices present and use all.
+        mp_n_gpu = mp.RawValue('i', 0)
+        p = mp.Process(target=n_gpu_getter, args=(mp_n_gpu))
+        p.start()
+        p.join()
+        n_gpu = mp_n_gpu.value
+        if n_gpu == 0:
+            raise RuntimeError("No cuda GPU detected by pygpu.")
+        elif n_gpu == 1:
+            raise RuntimeWarning("Only one GPU detected; undetermined behavior (but I could make it revert to regular Theano?)")
+        else:
+            print("Detected and attempting to use {} GPUs.".format(n_gpu))
+
+    if master_rank not in list(range(n_gpu)):
+        raise ValueError("Invalid value for master rank: ", master_rank)
+
+    return n_gpu, master_rank
+
+
+def build_sync(n_gpu):
+    from ctypes import c_bool
+
+    mgr = mp.Manager()
+    dictionary = mgr.dictionary()
+    barriers = struct(
+        distribute=mp.Barrier(n_gpu),
+        exec_in=mp.Barrier(n_gpu),
+        exec_out=mp.Barrier(n_gpu),
+    )
+    sync = struct(
+        dict=dictionary,  # use for setup e.g. Clique comm_id; serializes.
+        quit=mp.RawValue(c_bool, False),
+        distributed=mp.RawValue(c_bool, False),
+        exec_type=mp.RawValue('i', 0),
+        func_ID=mp.RawValue('i', 0),
+        comm_ID=mp.RawValue('i', 0),
+        n_shared=mp.RawValue('i', 0),
+        barriers=barriers,
+    )
+    return sync
+
+
+def check_collect(collect_mode, reduce_op):
+    if collect_mode not in COLLECT_MODES:
+        raise ValueError("Unrecognized collect_mode: ", collect_mode)
+    if collect_mode == "reduce":
+        if reduce_op not in REDUCE_OPS:
+            raise ValueError("Unrecognized reduce_op: ", reduce_op)
+    else:
+        reduce_op = None
+    return reduce_op
+
+
+def check_op(op):
+    if op not in REDUCE_OPS:
+        raise ValueError("Unrecognized reduction operator: ", op,
+            ", must be one of: ", [k for k in REDUCE_OPS.keys()])
+    elif op in ["avg", "average"]:
+        raise NotImplementedError
+    return REDUCE_OPS[op]
+
+
+def vars_as_gpu(variables):
+    """
+    Change all vars to be on GPU, if not already.  Record which were
+    previously on CPU (so they can be transfered after collecting, in the case
+    of outputs).
+    """
+    if variables is None:
+        return None, None
+    else:
+        from theano.gpuarray.type import GpuArrayVariable
+        if not isinstance(variables, (list, tuple)):
+            variables = (variables,)
+        variables = list(variables)
+        variables_to_cpu = list()
+        for idx, var in enumerate(variables):
+            if isinstance(var, GpuArrayVariable):
+                variables_to_cpu.append(False)
+            else:
+                variables_to_cpu.append(True)
+                variables[idx] = var.transfer(None)
+        return tuple(variables), tuple(variables_to_cpu)

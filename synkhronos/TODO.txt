@@ -1,0 +1,14 @@
+TODO yet... no particular order.
+
+
+1. communicate output_subset to worker (or drop this functionality)
+2. implement "average" reduce operation
+4. make it so some inputs get split among GPUs but other inputs get broadcast
+5. sliced functions for when data batch is too large for GPU
+6. TESTS...
+
+
+
+done
+3. implement function to return input_shmems from function
+3b. also make that function allocate shmems if provided with args?

@@ -6,20 +6,18 @@ This file has everything the workers do.
 
 
 import pickle
-import numpy as np
 
-from Function import SynkFunction
-import handling
-import util
-from util import (PKL_FILE, FUNCTION, GPU_COMM, BROADCAST, REDUCE, ALL_REDUCE,
-                  ALL_GATHER, WORKER_OPS, SH_ARRAY_TAG, SHMEM_TAG_PRE)
-from shmemarray import ShmemRawArray
+from common import Inputs, Shareds, SynkFunction
+from common import (use_gpu, init_gpu_comm, build_vars_sync, register_inputs,
+                    allocate_shmem)
+from common import (PKL_FILE, FUNCTION, GPU_COMM, BROADCAST, REDUCE, ALL_REDUCE,
+                  ALL_GATHER, WORKER_OPS)
 
 
-def get_op(sync, op_code):
-    if op_code not in WORKER_OPS:
+def get_op(sync, op_ID):
+    if op_ID not in WORKER_OPS:
         raise ValueError("Unrecognized reduce operation in worker.")
-    op = WORKER_OPS[op_code]
+    op = WORKER_OPS[op_ID]
     if op == "avg":
         raise NotImplementedError
 
@@ -44,19 +42,19 @@ class Function(SynkFunction):
 
     def receive_inputs(self, sync, all_inputs):
         my_inputs = list()
-        assign_idx = self.sync.assign_idx[self.code]
+        assign_idx = self.sync.vars.assign_idx[self._ID]
         my_idx = (assign_idx[self.rank], assign_idx[self.rank + 1])
-        for inpt_code in self.input_codes:
-            if sync.input_tags[inpt_code] != all_inputs.tags[inpt_code]:
+        for inpt_ID, shmem in [(i, all_inputs.shmems[i]) for i in self.input_IDs]:
+            if sync.vars.input_tags[inpt_ID] != all_inputs.tags[inpt_ID]:
                 # Then a new shmem has been allocated, need to get it.
-                all_inputs.shmems[inpt_code] = np.ctypeslib.as_array(
-                    ShmemRawArray(sync.input_typecodes[inpt_code],  # make this get ctype from dict
-                                  sync.input_sizes[inpt_code],
-                                  SHMEM_TAG_PRE + str(sync.input_tags[inpt_code]),
-                                  False)
-                    ).reshape(sync.input_shapes[inpt_code])  # this is a list of separate shmems
-                all_inputs.tags[inpt_code] = sync.input_tags[inpt_code]
-            my_inputs.append(all_inputs.shmems[inpt_code][my_idx[0]:my_idx[1]])
+                shmem = allocate_shmem(input_ID=inpt_ID,
+                                       inputs_global=all_inputs,
+                                       shape=sync.vars.shapes[inpt_ID],
+                                       tag_ID=sync.vars.input_tags[inpt_ID],
+                                       create=False,
+                                       )
+                all_inputs.tags[inpt_ID] = sync.vars.input_tags[inpt_ID]
+            my_inputs.append(shmem[my_idx[0]:my_idx[1]])
         return tuple(my_inputs)
 
     def _reduce_results(self, my_results, gpu_comm):
@@ -67,6 +65,27 @@ class Function(SynkFunction):
         """ use as gather (i.e. ignore "all") """
         for r in my_results:
             gpu_comm.all_gather(r)
+
+
+def unpack_functions(theano_functions):
+    """
+    Worker will recover shared variables in the same order as the master
+    committed them, so they will have the same ID (index).
+    """
+    from worker import Function
+
+    synk_functions = list()
+    inputs = Inputs()
+    shareds = Shareds()
+    for idx, fcn in enumerate(theano_functions):
+        input_IDs, shared_IDs, _ = register_inputs(fcn, inputs, shareds)
+        synk_functions.append(Function(name=fcn.name,
+                                       ID=idx,
+                                       theano_function=fcn,
+                                       input_IDs=input_IDs,
+                                       shared_IDs=shared_IDs)
+                              )
+    return synk_functions, inputs, shareds
 
 
 def worker_exec(rank, n_gpu, master_rank, sync):
@@ -84,18 +103,18 @@ def worker_exec(rank, n_gpu, master_rank, sync):
 
     """
     # Initialize distinct GPU.
-    util.use_gpu(rank)
+    use_gpu(rank)
 
     # Receive functions.
     sync.barriers.distribute.wait()
     if not sync.distributed.value:
         return  # (master closed before distributing functions--an error)
-    gpu_comm = util.init_gpu_comm(n_gpu, rank, sync.dict["comm_id"])
+    gpu_comm = init_gpu_comm(n_gpu, rank, sync.dict["comm_id"])
     with open(PKL_FILE, "rb") as f:
         theano_functions = pickle.load(f)  # should be all in one list
     # Might have the last worker delete the pkl file.
-    functions, inputs, shareds = handling.unpack_functions(theano_functions)
-    sync.shared_codes = ShmemRawArray('i', shareds.num, SH_ARRAY_TAG, False)
+    functions, inputs, shareds = unpack_functions(theano_functions)
+    sync.vars = build_vars_sync(inputs, shareds, len(functions), n_gpu, False)
     Function.rank = rank  # endow all functions
     Function.master_rank = master_rank
 
@@ -105,20 +124,20 @@ def worker_exec(rank, n_gpu, master_rank, sync):
         if sync.quit.value:
             break
         if sync.exec_type.value == FUNCTION:
-            functions[sync.func_code.value](sync, inputs, gpu_comm)
+            functions[sync.func_ID.value](sync, inputs, gpu_comm)
         elif sync.exec_type.value == GPU_COMM:
-            shared_codes = sync.shared_codes[:sync.n_shareds.value]
-            comm_code = sync.comm_code.value
+            shared_IDs = sync.shared_IDs[:sync.n_shareds.value]
+            comm_ID = sync.comm_ID.value
             op = get_op(sync, sync.comm_op.value)  # (might not be used)
-            for idx in shared_codes:
-                if comm_code == BROADCAST:
+            for idx in shared_IDs:
+                if comm_ID == BROADCAST:
                     gpu_comm.broadcast(shareds.gpuarrays[idx], root=master_rank)
-                elif comm_code == REDUCE:
+                elif comm_ID == REDUCE:
                     gpu_comm.reduce(shareds.gpuarrays[idx], op=op, root=master_rank)
-                elif comm_code == ALL_REDUCE:
+                elif comm_ID == ALL_REDUCE:
                     gpu_comm.all_reduce(shareds.gpuarrays[idx], op=op,
                             dest=shareds.gpuarrays[idx])
-                elif comm_code == ALL_GATHER:
+                elif comm_ID == ALL_GATHER:
                     # NOTE: Results on the workers are ignored (behaves like
                     # 'gather' to the master).  I think this will put results in
                     # new memory on the worker without affecting the shared
