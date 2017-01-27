@@ -14,7 +14,7 @@ from common import struct, Inputs, Shareds, SynkFunction
 from common import (use_gpu, init_gpu_comm, register_inputs, build_vars_sync,
                     allocate_shmem)
 from common import (PKL_FILE, FUNCTION, GPU_COMM, BROADCAST, REDUCE, ALL_REDUCE,
-                    ALL_GATHER, COLLECT_MODES, REDUCE_OPS)
+                    ALL_GATHER, COLLECT_MODES, REDUCE_OPS, AVG_ALIASES)
 
 
 # globals
@@ -57,11 +57,14 @@ def alloc_write_shmem(input_arg, input_ID):
 
 class Function(SynkFunction):
 
-    def __init__(self, outputs_to_cpu, input_names, *args, **kwargs):
+    def __init__(self, outputs_to_cpu, input_names, avg_functions,
+                 *args, **kwargs):
         super(Function).__init__(*args, **kwargs)
         self._call = self._pre_distributed_call
         self._outputs_to_cpu = outputs_to_cpu
         self._input_names = input_names
+        self._avg_functions = avg_functions
+        self._avg_fac = np.array(1 / g.n_gpu).astype('float32')  # maybe adaptive later
         self._previous_batch_size = None
         self._my_idx = None
         self._n_inputs = len(self._input_IDs)
@@ -92,7 +95,8 @@ class Function(SynkFunction):
                 for name, val in kwargs.iteritems():
                     ordered_inputs[self._input_names.index(name)] = val
             except ValueError as e:
-                raise e("Input passed as keyword arg not found in input names of function.")
+                raise e("Input passed as keyword arg not found in input names \
+                    of function.")
         if len(ordered_inputs) != self._n_inputs:
             raise TypeError("Incorrect number of inputs to synkhronos function.")
         return ordered_inputs, output_subset
@@ -101,11 +105,13 @@ class Function(SynkFunction):
         batch_size = ordered_inputs[0].shape[0]
         for inpt in ordered_inputs[1:]:
             if inpt.shape[0] != batch_size:
-                raise ValueError("Inputs of different batch sizes (using 0-th index).")
+                raise ValueError("Inputs of different batch sizes (using 0-th \
+                    index).")
         if batch_size != self._previous_batch_size:
-            assign_idx = np.ceil(np.linspace(0, batch_size, g.n_gpu + 1)).astype(int)
+            assign_idx = int(np.ceil(np.linspace(0, batch_size, g.n_gpu + 1)))
             g.sync.assign_idx[self._ID, :] = assign_idx
-            self._my_idx = (assign_idx[g.master_rank], assign_idx[g.master_rank + 1])
+            self._my_idx = (assign_idx[g.master_rank],
+                            assign_idx[g.master_rank + 1])
             self._previous_batch_size = batch_size
 
     def _update_shmem(self, inpt, inpt_ID):
@@ -118,9 +124,11 @@ class Function(SynkFunction):
             shmem_addr, _ = shmem.__array_interface__["data"]
             if inpt_addr == shmem_addr:
                 if inpt.__array_interface__["strides"] is not None:
-                    raise ValueError("Cannot accept strided view of existing shared memory as input.")
+                    raise ValueError("Cannot accept strided view of existing \
+                        shared memory as input.")
             else:
-                if inpt.shape[1:] != shmem.shape[1:] or inpt.shape[0] > shmem.shape[0]:
+                if inpt.shape[1:] != shmem.shape[1:] or \
+                        inpt.shape[0] > shmem.shape[0]:
                     # new shape or bigger batch
                     shmem = alloc_write_shmem(inpt, inpt_ID)
                 else:
@@ -149,23 +157,36 @@ class Function(SynkFunction):
         self._sync.func_ID.value = self._ID
         self._sync.barriers.exec_in.wait()
 
-    def _reduce_results(self, my_results):
-        for r in my_results:
-            g.gpu_comm.reduce(r, op=self._reduce_op, dest=r)  # (in-place)
-        results = list(my_results)
-        return results
-
-    def _gather_results(self, my_results):
+    def _collect_results(self, my_results):
         results = list()
-        for r in my_results:
-            results.append(g.gpu_comm.all_gather(r))  # I think this will return a single GPU Array
+        idx = -1
+        for (idx, r), mode, op in zip(enumerate(my_results),
+                                      self.collect_modes, self.reduce_ops):
+            if mode == "reduce":
+                if op in AVG_ALIASES:
+                    g.gpu_comm.reduce(r, op="sum", dest=r)
+                    # Then do the average.
+                    r = self._avg_functions[idx](r, self._avg_fac)
+                else:
+                    g.gpu_comm.reduce(r, op=op, dest=r)  # (in-place)
+                results.append(r)
+            elif mode == "gather":
+                res = g.gpu_comm.all_gather(r)  # TODO: figure out exactly what this returns
+                results.append(res)
+            elif mode is None:
+                results.append(r)
+            else:
+                raise RuntimeError("Unrecognized collect mode in master function.")
+
         return results
 
     def _closed_call(self, *args):
-        raise RuntimeError("Synkhronos already closed, can only call Theano function.")
+        raise RuntimeError("Synkhronos already closed, can only call Theano \
+            function.")
 
     def _pre_distributed_call(self, *args):
-        raise RuntimeError("Synkhronos functions have not been distributed to workers, can only call Theano function.")
+        raise RuntimeError("Synkhronos functions have not been distributed to \
+            workers, can only call Theano function.")
 
     def _synk_call(self, *args, **kwargs):
         """
@@ -178,7 +199,8 @@ class Function(SynkFunction):
         NOTE: Barriers happen INSIDE master function call.
         """
         return_shmems = kwargs.pop("return_shmems", False)
-        my_inputs, output_subset, input_shmems = self._share_inputs(*args, **kwargs)  # ugh now i have to get the right index
+        my_inputs, output_subset, input_shmems = self._share_inputs(*args,
+                                                                    **kwargs)
         self._set_worker_signal()
         my_results = self._call_theano_function(my_inputs, output_subset)  # always a list
         results = self._collect_results(my_results)  # returns a list
@@ -186,14 +208,15 @@ class Function(SynkFunction):
             results[idx] = np.array(results[idx])
         self._sync.barriers.exec_out.wait()  # NOTE: Not sure if keeping this--yes
         if return_shmems:
-            results += input_shmems  # append the list of results with tuple of shmems
+            results += input_shmems  # append list of results with tuple of shmems
         if len(results) == 1:
             results = results[0]
         return results
 
     def get_input_shmems(self, *args, **kwargs):
         if self._call is not self._synk_call:
-            raise RuntimeError("Cannot call this method on inactive synkhronos function.")
+            raise RuntimeError("Cannot call this method on inactive synkhronos \
+                function.")
         input_shmems = list()
         if not args and not kwargs:
             # gather existing
@@ -206,7 +229,7 @@ class Function(SynkFunction):
 
 
 def function(inputs, outputs=None, updates=None, name=None,
-             collect_mode="reduce", reduce_op="avg"):
+             collect_modes="reduce", reduce_ops="avg"):
     """
     Call this in the master process when normally creating a theano function.
 
@@ -222,7 +245,7 @@ def function(inputs, outputs=None, updates=None, name=None,
     if g.distributed:
         raise RuntimeError("Cannot make new functions after distributing.")
 
-    reduce_op = check_collect(collect_mode, reduce_op)
+    collect_modes, reduce_ops = check_collect(outputs, collect_modes, reduce_ops)
 
     # Keep the outputs on the GPU; remember which to eventually send to CPU.
     gpu_outputs, outputs_to_cpu = vars_as_gpu(outputs)
@@ -238,6 +261,7 @@ def function(inputs, outputs=None, updates=None, name=None,
                                                          g.inputs,
                                                          g.shareds,
                                                          )
+    avg_functions = build_output_avg_functions(reduce_ops, gpu_outputs)
     synk_function = Function(name=name,
                              ID=len(g.synk_functions),  # Fcn can ID itself...?
                              theano_function=theano_function,
@@ -245,8 +269,9 @@ def function(inputs, outputs=None, updates=None, name=None,
                              input_names=input_names,
                              shared_IDs=shared_IDs,
                              outputs_to_cpu=outputs_to_cpu,
-                             collect_mode=collect_mode,
-                             reduce_op=reduce_op
+                             collect_modes=collect_modes,
+                             reduce_ops=reduce_ops,
+                             avg_functions=avg_functions,
                              )
     g.synk_functions.append(synk_function)
     return synk_function
@@ -273,7 +298,8 @@ def get_shared_IDs(synk_functions=None, shared_names=None):
             shared_names = (shared_names,)
         for name in shared_names:
             if name not in g.shareds.names:
-                raise ValueError("Unrecognized name for shared variable: ", name)
+                raise ValueError("Unrecognized name for shared variable: ",
+                    name)
 
         shared_IDs = list()
         for synk_fcn in synk_functions:
@@ -286,9 +312,11 @@ def get_shared_IDs(synk_functions=None, shared_names=None):
 def gpu_comm_function(gpu_comm_func, comm_ID, has_op=False):
     def build_comm_procedure(f):
         @functools.wraps(f)  # (preserves signature and docstring of wrapped)
-        def gpu_comm_procedure(functions=None, shared_names=None, op=None, **kwargs):
+        def gpu_comm_procedure(functions=None, shared_names=None, op=None,
+                               **kwargs):
             if g.closed:
-                raise RuntimeError("synk already closed--cannot call comm function.")
+                raise RuntimeError("synk already closed--cannot call comm \
+                    function.")
             g.sync.exec_type = GPU_COMM
             g.sync.comm_ID = comm_ID
             shared_IDs = get_shared_IDs(functions, shared_names)
@@ -319,7 +347,7 @@ def reduce_func(src, op, in_place=True, dest=None):
 
 
 def all_reduce_func(src, op):
-    # workers can't get new arrays, so everyone (including master) will overwrite src
+    # workers can't get new arrays; everyone (including master) overwrites src
     g.gpu_comm.all_reduce(src, op=op, dest=src)
     return src
 
@@ -337,7 +365,8 @@ def all_reduce(functions=None, shared_names=None, op="avg"):
 
 
 @gpu_comm_function(reduce_func, REDUCE, has_op=True)
-def reduce(functions=None, shared_names=None, op="avg", in_place=True, dest=None):
+def reduce(functions=None, shared_names=None, op="avg", in_place=True,
+           dest=None):
     """reduce docstring"""
     pass
 
@@ -439,16 +468,23 @@ def distribute_functions():
     if g.distributed:
         raise RuntimeError("Can distribute only once.")
 
+    shared_avg_functions = build_shared_avg_functions(g.shareds)
+
+    pkl_functions = g.theano_functions + shared_avg_functions  # (combine lists)
+
     # NOTE: pickle all functions together in one list to preserve
     # correspondences among shared variables in different functions.
     with open(PKL_FILE, "wb") as f:
-        pickle.dump(g.theano_functions, f, pickle.HIGHEST_PROTOCOL)
+        pickle.dump(pkl_functions, f, pickle.HIGHEST_PROTOCOL)
 
-    g.sync.vars = build_vars_sync(g.inputs, g.shareds, len(g.functions), g.n_gpu)
     gpu_comm, comm_id = init_gpu_comm(g.n_gpu, g.master_rank)
-    g.sync.dict["comm_id"] = comm_id  # workers need this to join gpu comm clique
+    g.sync.dict["comm_id"] = comm_id  # workers need it to join gpu comm clique
+    g.sync.n_user_fcns.value = len(g.theano_functions)
+    g.sync.dict["collect_modes"] = [fn._collect_modes for fn in g.synk_functions]
+    g.sync.dict["reduce_ops"] = get_worker_reduce_ops(g.synk_functions)
     g.sync.distributed.value = True  # let the workers know this part succeeded
     g.sync.barriers.distribute.wait()  # signal workers to receive & join comm
+    g.sync.vars = build_vars_sync(g.inputs, g.shareds, len(g.functions), g.n_gpu)
     for synk_fcn in g.synk_functions:
         synk_fcn._set_normal_call()
     g.gpu_comm = gpu_comm
@@ -485,7 +521,8 @@ def n_gpu(n_gpu, master_rank):
         if n_gpu == 0:
             raise RuntimeError("No cuda GPU detected by pygpu.")
         elif n_gpu == 1:
-            raise RuntimeWarning("Only one GPU detected; undetermined behavior (but I could make it revert to regular Theano?)")
+            raise RuntimeWarning("Only one GPU detected; undetermined behavior \
+                (but I could make it revert to regular Theano?)")
         else:
             print("Detected and attempting to use {} GPUs.".format(n_gpu))
 
@@ -499,7 +536,7 @@ def build_sync(n_gpu):
     from ctypes import c_bool
 
     mgr = mp.Manager()
-    dictionary = mgr.dictionary()
+    dictionary = mgr.dict()
     barriers = struct(
         distribute=mp.Barrier(n_gpu),
         exec_in=mp.Barrier(n_gpu),
@@ -508,6 +545,7 @@ def build_sync(n_gpu):
     sync = struct(
         dict=dictionary,  # use for setup e.g. Clique comm_id; serializes.
         quit=mp.RawValue(c_bool, False),
+        n_user_fcns=mp.RawValue('i', 0),
         distributed=mp.RawValue(c_bool, False),
         exec_type=mp.RawValue('i', 0),
         func_ID=mp.RawValue('i', 0),
@@ -518,15 +556,47 @@ def build_sync(n_gpu):
     return sync
 
 
-def check_collect(collect_mode, reduce_op):
-    if collect_mode not in COLLECT_MODES:
-        raise ValueError("Unrecognized collect_mode: ", collect_mode)
-    if collect_mode == "reduce":
-        if reduce_op not in REDUCE_OPS:
-            raise ValueError("Unrecognized reduce_op: ", reduce_op)
+def check_collect(outputs, collect_modes, reduce_ops):
+    if outputs is None:
+        if collect_modes is not None or reduce_ops is not None:
+            raise RuntimeWarning("No function outputs, ignoring collect_modes \
+                and reduce_ops parameters.")
+        return None, None
+    n_outputs = len(outputs)
+    if not isinstance(collect_modes, (list, tuple)):
+        collect_modes = [collect_modes] * n_outputs
+    if len(collect_modes) != n_outputs:
+        raise ValueError("Number of collect modes does not match number of \
+            outputs (or enter a single string to be used for all outputs).")
+    for mode in collect_modes:
+        if mode not in COLLECT_MODES:
+            raise ValueError("Unrecognized collect_mode: ", mode)
+    if not isinstance(reduce_ops, (list, tuple)):
+        tmp_ops = list()
+        for mode in collect_modes:
+            if mode == "reduce":
+                tmp_ops.append(reduce_ops)
+            else:
+                tmp_ops.append(None)
+        reduce_ops = tmp_ops
+    if "reduce" not in collect_modes and \
+            any([op is not None for op in reduce_ops]):
+        raise RuntimeWarning("Reduce op(s) provided but ignored--no reduced \
+            outputs.")
+    if len(reduce_ops) != n_outputs:
+        raise ValueError("Number of reduce ops does not match number of \
+            outputs (use None for non-reduce outputs, or a single string for \
+            all reduced outputs).")
     else:
-        reduce_op = None
-    return reduce_op
+        for idx, op in enumerate(reduce_ops):
+            if collect_modes[idx] == "reduce":
+                if op not in REDUCE_OPS:
+                    raise ValueError("Unrecognized reduce op: ", op)
+            else:
+                if op is not None:
+                    raise RuntimeWarning("Reduce op provided but ignored for \
+                        non-reduce collect mode.")
+    return collect_modes, reduce_ops
 
 
 def check_op(op):
@@ -559,3 +629,38 @@ def vars_as_gpu(variables):
                 variables_to_cpu.append(True)
                 variables[idx] = var.transfer(None)
         return tuple(variables), tuple(variables_to_cpu)
+
+
+def build_output_avg_functions(reduce_ops, gpu_outputs):
+    # TODO: if some outputs are the same type, just have one theano function
+    # for that type and assign it to multpiple outputs... is it just ndim?
+    avg_fac = theano.tensor.scalar('float32')
+    avg_functions = list()
+    for op, otpt in zip(reduce_ops, gpu_outputs):
+        if op in AVG_ALIASES:
+            avg_fac = theano.tensor.scalar(otpt.type.dtype)
+            avg = (otpt * avg_fac).transfer(None)
+            avg_function = theano.function([otpt, avg_fac], avg)
+            avg_functions.append(avg_function)
+        else:
+            avg_functions.append(None)
+    return avg_functions
+
+
+def build_shared_avg_functions(shareds_global):
+    avg_functions = list()
+    for shared_var in shareds_global.vars:
+        avg_fac = theano.tensor.scalar(shared_var.type.dtype)
+        avg_functions.append(theano.function([avg_fac],
+            updates={shared_var: shared_var * avg_fac}))
+    shareds_global.avg_functions = avg_functions
+    return avg_functions
+
+
+def get_worker_reduce_ops(synk_functions):
+    reduce_ops_all = [fn.reduce_ops for fn in synk_functions]
+    for ops in reduce_ops_all:
+        for idx, op in enumerate(ops):
+            if op in AVG_ALIASES:
+                ops[idx] = "sum"
+    return reduce_ops_all

@@ -6,6 +6,9 @@ TODO yet... no particular order.
 4. make it so some inputs get split among GPUs but other inputs get broadcast
 5. sliced functions for when data batch is too large for GPU
 6. TESTS...
+7. go back and check what other inputs there are for making a theano function,
+   and see about supporting those.
+8. make theano shared var "scatter" possible using CPU shared memory
 
 
 

@@ -51,7 +51,10 @@ REDUCE_OPS = {"+": 0,
               "minimum": 3,
               "avg": 4,
               "average": 4,
+              "mean": 4,
               }
+
+AVG_ALIASES = ["avg", "average", "mean"]
 
 WORKER_OPS = {0: "sum",
               1: "prod",
@@ -103,37 +106,42 @@ class Inputs(struct):
         self.num = 0
 
     def append(self, store):
-        ID = self.num
+        input_ID = self.num
         self.names.append(store.name)
         if store.name is None:
-            raise RuntimeWarning("Synkhronos encountered un-named input; shared memory management is improved if inputs used in multiple functions are named.")
+            raise RuntimeWarning("Synkhronos encountered un-named input; \
+                shared memory management is improved if inputs used in \
+                multiple functions are named.")
         self.dtypes.append(store.type.dtype)
         c_type = NP_TO_C_TYPE.get(store.type.dtype, None)
         if c_type is None:
-            raise TypeError("Numpy/Theano type: ", store.type.dtype, " not supported.")
+            raise TypeError("Numpy/Theano type: ", store.type.dtype,
+                " not supported.")
         self.ctypes.append(c_type)
         self.tags.append(ID)
         self.ndims.append(store.type.ndim)
         self.shmems.append(None)
         self.num += 1
-        return ID
+        return input_ID
 
 
 class Shareds(struct):
 
     def __init__(self, **kwargs):
         super(Shareds).__init__(self, **kwargs)
+        self.vars = list()
         self.gpuarrays = list()
         self.names = list()
+        self.avg_functions = list()
         self.num = 0
 
-    def append(self, store):
-        ID = self.num
-        self.names.append(store.name)
-        assert store.data is not None
-        self.gpuarrays.append(store.data)
+    def append(self, shared_var):
+        shared_ID = self.num
+        self.vars.append(shared_var)
+        self.gpuarrays.append(shared_var.container.data)
+        self.names.append(shared_var.name)
         self.num += 1
-        return ID
+        return shared_ID
 
 
 class SynkFunction(object):
@@ -143,25 +151,19 @@ class SynkFunction(object):
                  theano_function,
                  input_IDs,
                  shared_IDs,
-                 collect_mode,
-                 reduce_op=None,
+                 collect_modes,
                  name=None,
+                 reduce_ops=None,
+                 avg_fac=None,
                  ):
         self._ID = ID
         self._theano_function = theano_function
         self._input_IDs = input_IDs
         self._shared_IDs = shared_IDs
+        self._collect_modes = collect_modes
         self._name = name
-        if collect_mode == "reduce":
-            self._collect_results = self._reduce_results
-            self._reduce_op = reduce_op
-        elif collect_mode == "gather":
-            self._collect_results = self._gather_results
-            self._reduce_op = None
-        else:
-            raise RuntimeError("Unrecognized collect mode in function: ",
-                collect_mode)
-        self._collect_mode = collect_mode
+        self._reduce_ops = reduce_ops
+        self._avg_fac = avg_fac
 
     @property
     def name(self):
@@ -172,12 +174,12 @@ class SynkFunction(object):
         return self._theano_function
 
     @property
-    def collect_mode(self):
-        return self._collect_mode
+    def collect_modes(self):
+        return self._collect_modes
 
     @property
-    def reduce_op(self):
-        return self._reduce_op
+    def reduce_ops(self):
+        return self._reduce_ops
 
     def _call_theano_function(self, inputs, output_subset=None):
         results = self._theano_function(*inputs, output_subset=output_subset)
@@ -185,13 +187,13 @@ class SynkFunction(object):
             results = [results, ]
         return results  # (always returns a list, even if length 1)
 
-    def _reduce_results(self, *args, **kwargs):
-        """ Different for master vs worker """
-        raise NotImplementedError
+    # def _reduce_results(self, *args, **kwargs):
+    #     """ Different for master vs worker """
+    #     raise NotImplementedError
 
-    def _gather_results(self, *args, **kwargs):
-        """ Different for master vs worker """
-        raise NotImplementedError
+    # def _gather_results(self, *args, **kwargs):
+    #     """ Different for master vs worker """
+    #     raise NotImplementedError
 
 
 ###############################################################################
@@ -226,16 +228,15 @@ def register_inputs(theano_function, inputs_global, shareds_global):
     input_IDs = list()
     input_names = list()
     shared_IDs = list()
+    shareds = theano_function.get_shareds()
+    for shared in shareds:
+        if shared in shareds_global.vars:
+            shared_IDs.append(shareds_global.vars.index(shared))
+        else:
+            shared_ID = shareds_global.append(shared)
+            shared_IDs.append(shared_ID)
     for store in theano_function.input_storage:
-        if store.implicit:  # (a shared variable)
-            for idx, gpuarray in enumerate(shareds_global.gpuarrays):
-                if store.data is gpuarray:  # (a previously registered shared)
-                    shared_IDs.append(idx)
-                    break
-            else:  # (does not match any previously registered)
-                sh_ID = shareds_global.append(store)
-                shared_IDs.append(sh_ID)
-        else:  # (an explicit input)
+        if not store.implicit:  # (so an explicit input)
             input_names.append(store.name)
             if store.name is None or store.name not in inputs_global.names:
                 inpt_ID = inputs_global.append(store)
