@@ -2,23 +2,26 @@ TODO yet... no particular order.
 
 
 1. communicate output_subset to worker (or drop this functionality)
+12. Make sure I understand what is return from gpu_comm.all_gather(r)
 6. TESTS...
 5. sliced functions for when data batch is too large for GPU
-9. Another pass over for re-org and cleanup...lots of new little helper funcs.
-11. Maybe use the input finder already in Theano function to do input checking in synk._call()
-12. Make sure I understand what is return from gpu_comm.all_gather(r)
-13. Make so can also do broadcast by passing shared_var instances, not just by name.
 14. Possibly need to make the close procedure robust to errors in different places? And maybe so within worker?
-9c. Make it so only functions exposed to user use g, the global struct, and all
-other functions get passed to them the lowest structure that is needed.  The other functions can still modify by side-effect, but still it should be much easier to follow the code and know what the hell is going on.
-9d. Give functions in master reference to avg_function of their outputs.
-15. Make sure using "givens" param for theano function doesn't mess something up.
-
+15. Double check that all the master utils are set up right...some things might have changed...and maybe the way the reduce OPs are handled could be streamlined.
 
 
 
 DONE
 ----
+9. Another pass over for re-org and cleanup...lots of new little helper funcs.
+9g. collect the things that don't modify the globals into another file?  Or just group them down at the bottom. --- YES this looks SO much BETTER! made util.py.
+9f. Now the master file is getting a bit cluttered, maybe move the Outputs class (so it can be imported) --- yes, created variables file.
+15. Make sure using "givens" param for theano function doesn't mess something up. --- I think this should be OK; it doesn't change the inputs, the outputs on a function don't correspond to the outputs provided to make the function, and the givens can't change the type of the argument, so I think all ndims will stay the same, so avg_funcs are safe.
+11. Maybe use the input finder already in Theano function to do input checking in synk._call() -- NO, but I did add basic datatype and dimension checking.
+13. Make so can also do broadcast by passing shared_var instances, not just by name.
+9e. Since get_shared_shmems uses _share_inputs, break down that code into the part used by both and the part only used in calling function.
+9c. Make it so only functions exposed to user use g, the global struct, and all
+other functions get passed to them the lowest structure that is needed.  The other functions can still modify by side-effect, but still it should be much easier to follow the code and know what the hell is going on.
+9d. Give functions in master reference to avg_function of their outputs.
 7. go back and check what other inputs there are for making a theano function,
    and see about supporting those---sure, just pass them on in.
 9b. Make outputs a class, to help organize the functions that only are needed
@@ -30,3 +33,9 @@ DONE
 2. implement "average" reduce operation
 3. implement function to return input_shmems from function
 3b. also make that function allocate shmems if provided with args?
+
+
+
+WOULD BE NICE IF:
+----------------
+1. Theano exposed input checking for functions and/or input variables.
