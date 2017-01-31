@@ -11,11 +11,10 @@ import theano
 import functools
 
 from variables import Inputs, Shareds, Outputs
-from common import struct, SynkFunction
-from common import use_gpu, init_gpu_comm
+from common import use_gpu, init_gpu_comm, SynkFunction
 from common import (PKL_FILE, FUNCTION, GPU_COMM, BROADCAST, REDUCE, ALL_REDUCE,
                     ALL_GATHER, CPU_COMM, AVG_ALIASES, SCATTER)
-from util import (get_n_gpu, build_sync, check_collect, check_op,
+from util import (struct, get_n_gpu, build_sync, check_collect, check_op,
                   check_inputs_scatter, get_worker_reduce_ops,
                   check_shared_var, check_scatter_sources, get_shared_IDs)
 
