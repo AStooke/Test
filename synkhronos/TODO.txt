@@ -1,17 +1,19 @@
 TODO yet... no particular order.
 
 
-1. communicate output_subset to worker (or drop this functionality)
-12. Make sure I understand what is return from gpu_comm.all_gather(r)
-6. TESTS...
-5. sliced functions for when data batch is too large for GPU
-14. Possibly need to make the close procedure robust to errors in different places? And maybe so within worker?
 15. Double check that all the master utils are set up right...some things might have changed...and maybe the way the reduce OPs are handled could be streamlined.
+6. TESTS...
+14. Possibly need to make the close procedure robust to errors in different places? And maybe so within worker?
 
 
 
 DONE
 ----
+18. Made an all-gather!!
+12. Make sure I understand what is return from gpu_comm.all_gather(r)
+1. communicate output_subset to worker (or drop this functionality) --- FINALLY...made it all complicated at first but then made it simple and good.
+17. Cleaning up how functions are made, in part to support #1.
+16. I think the variables classes can be partially combined and streamlined. --- yup did this...not much gain, but some.
 9. Another pass over for re-org and cleanup...lots of new little helper funcs.
 9g. collect the things that don't modify the globals into another file?  Or just group them down at the bottom. --- YES this looks SO much BETTER! made util.py.
 9f. Now the master file is getting a bit cluttered, maybe move the Outputs class (so it can be imported) --- yes, created variables file.
@@ -38,4 +40,5 @@ other functions get passed to them the lowest structure that is needed.  The oth
 
 WOULD BE NICE IF:
 ----------------
+5. sliced functions for when data batch is too large for GPU
 1. Theano exposed input checking for functions and/or input variables.

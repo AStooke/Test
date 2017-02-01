@@ -6,14 +6,19 @@ import os
 import numpy as np
 import multiprocessing as mp
 import time
+import theano
+
+import ipdb
 
 N_GPU = 2
 MASTER_RANK = 0
 
 
 def target(rank, d, b):
+    import theano.gpuarray
+    theano.gpuarray.use('cuda1')
+
     os.environ["THEANO_FLAGS"] = "device=cuda" + str(rank)
-    import theano
     from pygpu import collectives as gpucoll
 
     gpuctx = theano.gpuarray.get_context(None)
@@ -30,14 +35,18 @@ def target(rank, d, b):
     f = theano.function([x, y], z.transfer(None))
     x_dat = np.ones([3, 3], dtype='float32')
     r = f(x_dat, x_dat)
+    gathered_r = local_comm.all_gather(r, nd_up=0)
     local_comm.reduce(r, 'sum', root=MASTER_RANK)
+    local_comm.all_gather(r, nd_up=0)
+    time.sleep(1)
+    print("\nworker gathered_r: \n", gathered_r)
 
-    time.sleep(1)  # (just for sequential printing)
+    # time.sleep(2)  # (just for sequential printing)
 
-    s = theano.shared(np.zeros([2, 2], dtype='float32'))
-    print("\nworker shared before broadcast: \n", s.get_value())
-    local_comm.broadcast(s.container.data, root=MASTER_RANK)
-    print("\nworker shared after broadcast: \n", s.get_value())
+    # s = theano.shared(np.zeros([2, 2], dtype='float32'))
+    # print("\nworker shared before broadcast: \n", s.get_value())
+    # local_comm.broadcast(s.container.data, root=MASTER_RANK)
+    # print("\nworker shared after broadcast: \n", s.get_value())
 
 
 def main():
@@ -48,8 +57,8 @@ def main():
     p = mp.Process(target=target, args=(1, d, b))
     p.start()
 
-    os.environ["THEANO_FLAGS"] = "device=cuda" + str(MASTER_RANK)
-    import theano
+    import theano.gpuarray
+    theano.gpuarray.use('cuda0')
     from pygpu import collectives as gpucoll
 
     gpuctx = theano.gpuarray.get_context(None)
@@ -64,14 +73,22 @@ def main():
     f = theano.function([x, y], z.transfer(None))
     x_dat = np.ones([3, 3], dtype='float32')
     r = f(x_dat, x_dat)
+
+    gathered_r = local_comm.all_gather(r, nd_up=0)
+    print("\nmaster gathered_r: \n", gathered_r)
+
     print("\nresult in master before reduce: \n", r)
     local_comm.reduce(r, 'sum', r, root=0)
     print("\nresult in master after reduce: \n", r)
 
-    time.sleep(1)
+    gather_ret2 = local_comm.all_gather(r, dest=gathered_r, nd_up=1)
 
-    s = theano.shared(np.ones([2, 2], dtype='float32'))
-    local_comm.broadcast(s.container.data)
+    ipdb.set_trace()
+
+    # time.sleep(2)
+
+    # s = theano.shared(np.ones([2, 2], dtype='float32'))
+    # local_comm.broadcast(s.container.data)
 
     p.join()
 

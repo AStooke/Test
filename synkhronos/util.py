@@ -90,7 +90,7 @@ def check_collect(outputs, collect_modes, reduce_ops):
         if collect_modes is not None or reduce_ops is not None:
             raise RuntimeWarning("No function outputs, ignoring collect_modes \
                 and reduce_ops parameters.")
-        return None, None
+        return [], []
     n_outputs = len(outputs)
     if not isinstance(collect_modes, (list, tuple)):
         collect_modes = [collect_modes] * n_outputs
@@ -144,7 +144,7 @@ def get_worker_reduce_ops(synk_functions):
     return reduce_ops_all
 
 
-def check_inputs_scatter(inputs, broadcast_inputs, scatter_inputs):
+def check_func_scatter(inputs, broadcast_inputs, scatter_inputs):
     if broadcast_inputs is not None and scatter_inputs is not None:
         raise ValueError("May specify either broadcast_inputs or scatter_inputs but not both.")
     if broadcast_inputs is None and scatter_inputs is None:

@@ -23,6 +23,7 @@ BROADCAST = 0
 REDUCE = 1
 ALL_REDUCE = 2
 ALL_GATHER = 3
+GATHER = 4
 
 # CPU_COMM IDs
 SCATTER = 0
@@ -54,63 +55,6 @@ WORKER_OPS = {0: "sum",  # Make sure this is inverse of REDUCE_OPS
               }
 
 AVG_ALIASES = ["avg", "average", "mean"]
-
-
-###############################################################################
-#                                                                             #
-#                                Classes                                      #
-#                                                                             #
-###############################################################################
-
-
-class SynkFunction(object):
-
-    def __init__(self,
-                 ID,
-                 theano_function,
-                 input_IDs,
-                 inputs_scatter,
-                 shared_IDs,
-                 collect_modes,
-                 name=None,
-                 reduce_ops=None,
-                 avg_fac=None,
-                 ):
-        self._ID = ID
-        self._theano_function = theano_function
-        self._input_IDs = input_IDs
-        self._inputs_scatter = inputs_scatter
-        self._shared_IDs = shared_IDs
-        self._collect_modes = collect_modes
-        self._name = name
-        self._reduce_ops = reduce_ops
-        self._avg_fac = avg_fac
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def theano_function(self):
-        return self._theano_function
-
-    @property
-    def collect_modes(self):
-        return self._collect_modes
-
-    @property
-    def reduce_ops(self):
-        return self._reduce_ops
-
-    @property
-    def inputs_scatter(self):
-        return self._inputs_scatter
-
-    def _call_theano_function(self, inputs, output_subset=None):
-        results = self._theano_function(*inputs, output_subset=output_subset)
-        if not isinstance(results, list):
-            results = [results, ]
-        return results  # (always returns a list, even if length 1)
 
 
 ###############################################################################
