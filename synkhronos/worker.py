@@ -128,7 +128,9 @@ def worker_exec(rank, n_gpu, master_rank, sync):
 
     """
     # Initialize distinct GPU.
-    use_gpu(rank)
+    success = use_gpu(rank, sync)
+    if not success:
+        return
 
     # Receive functions.
     sync.barriers.distribute.wait()

@@ -5,6 +5,7 @@ Classes and functions used by master but which don't MODIFY globals
 
 import numpy as np
 import multiprocessing as mp
+import ctypes
 
 from common import REDUCE_OPS, AVG_ALIASES
 from common import SynkFunction
@@ -21,8 +22,7 @@ class struct(dict):
 
 
 def build_sync(n_gpu):
-    from ctypes import c_bool
-
+    
     mgr = mp.Manager()
     dictionary = mgr.dict()
     barriers = struct(
@@ -32,9 +32,10 @@ def build_sync(n_gpu):
     )
     sync = struct(
         dict=dictionary,  # use for setup e.g. Clique comm_id; serializes.
-        quit=mp.RawValue(c_bool, False),
+        quit=mp.RawValue(ctypes.c_bool, False),
+        gpu_inited=mp.Value(ctypes.c_bool, True),
         n_user_fcns=mp.RawValue('i', 0),
-        distributed=mp.RawValue(c_bool, False),
+        distributed=mp.RawValue(ctypes.c_bool, False),
         exec_type=mp.RawValue('i', 0),
         func_ID=mp.RawValue('i', 0),
         comm_ID=mp.RawValue('i', 0),
@@ -57,11 +58,10 @@ def n_gpu_getter(mp_n_gpu):
 
 
 def get_n_gpu(n_gpu, master_rank):
+    master_rank = int(master_rank)
     if n_gpu is not None:
         n_gpu = int(n_gpu)
-    master_rank = int(master_rank)
-
-    if n_gpu is None:
+    else:
         #  Detect the number of devices present and use all.
         mp_n_gpu = mp.RawValue('i', 0)
         p = mp.Process(target=n_gpu_getter, args=(mp_n_gpu))

@@ -3,6 +3,7 @@ Constansts, classes, and functions used across master and worker.
 """
 
 import os
+import sys
 
 
 ###############################################################################
@@ -64,10 +65,28 @@ AVG_ALIASES = ["avg", "average", "mean"]
 ###############################################################################
 
 
-def use_gpu(rank):
+def use_gpu(rank, sync):
     dev_str = "cuda" + str(rank)
-    import theano.gpuarray
-    theano.gpuarray.use(dev_str)
+    err = None
+    try:
+        import theano.gpuarray
+        theano.gpuarray.use(dev_str)
+    except:
+        err = sys.exc_info()[1]
+        sync.gpu_inited.value = False  # (let others know it failed)
+    sync.barriers.gpu_init.wait()
+    if err is not None:
+        if not isinstance(err, ImportError):
+            raise err
+    # TODO
+
+
+    if not import_success or err is not None:
+        sync.gpu_inited.value = False  # (let others know it failed)
+    sync.barriers.gpu_init.wait()
+    if err is not None:
+        raise err
+    return sync.gpu_inited.value
 
 
 def init_gpu_comm(n_gpu, rank, comm_id=None):
