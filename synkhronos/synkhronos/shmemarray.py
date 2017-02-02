@@ -15,16 +15,18 @@
 #
 # Author: Shawn Chin (http://shawnchin.github.com)
 #
+# Edited for python 3 by: Adam Stooke
+#
 
 # import os
 import sys
 import mmap
 import ctypes
 import posix_ipc
-from _multiprocessing import address_of_buffer
+# from _multiprocessing import address_of_buffer  # (not in python 3)
 from string import ascii_letters, digits
 
-valid_chars = frozenset("-_. %s%s" % (ascii_letters, digits))
+valid_chars = frozenset("/-_. %s%s" % (ascii_letters, digits))
 
 typecode_to_type = {
     'c': ctypes.c_char, 'u': ctypes.c_wchar,
@@ -36,7 +38,12 @@ typecode_to_type = {
 }
 
 
+def address_of_buffer(buf):  # (python 3)
+    return ctypes.addressof(ctypes.c_char.from_buffer(buf))
+
+
 class ShmemBufferWrapper(object):
+
     def __init__(self, tag, size, create=True):
         # default vals so __del__ doesn't fail if __init__ fails to complete
         self._mem = None
@@ -44,15 +51,17 @@ class ShmemBufferWrapper(object):
         self._owner = create
         self.size = size
 
-        assert 0 <= size < sys.maxint
+        assert 0 <= size < sys.maxsize  # sys.maxint  (python 3)
         flag = (0, posix_ipc.O_CREX)[create]
         self._mem = posix_ipc.SharedMemory(tag, flags=flag, size=size)
         self._map = mmap.mmap(self._mem.fd, self._mem.size)
         self._mem.close_fd()
 
     def get_address(self):
-        addr, size = address_of_buffer(self._map)
-        assert size == self.size
+        # addr, size = address_of_buffer(self._map)
+        # assert size == self.size
+        assert self._map.size() == self.size  # (changed for python 3)
+        addr = address_of_buffer(self._map)
         return addr
 
     def __del__(self):
