@@ -3,7 +3,7 @@ import theano
 import theano.tensor as T
 import numpy as np
 
-N = 2000
+N = 5000
 
 x_var = T.matrix('x', dtype='float32')
 y_var = T.matrix('y', dtype='float32')
