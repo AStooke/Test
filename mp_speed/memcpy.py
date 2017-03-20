@@ -4,12 +4,21 @@ import numpy as np
 import multiprocessing as mp
 from timeit import default_timer as timer
 
-N_WORKER = 16
+N_WORKER = 1
 SHARED_DEST = True
-SHAPE = (320000, 105, 80)
+SHAPE = (160000, 105, 80)
+
+def byte_aligned(shape, dtype='float64', alignment=64, offset=0):
+    dtype = np.dtype(dtype)
+    nbytes = int(np.prod(shape)) * dtype.itemsize
+    buf = np.empty(nbytes + alignment, dtype=np.uint8)
+    s_idx = -buf.ctypes.data % alignment + offset
+    return buf[s_idx:s_idx + nbytes].view(dtype).reshape(shape)
+
+
 def copy_worker(source, dest, copy_slice, barriers):
-    p = psutil.Process()
-    p.cpu_affinity(list(range(20, 40)))
+    # p = psutil.Process()
+    # p.cpu_affinity(list(range(20, 40)))
     # t_start = timer()
     # source[0] = 1
     # t_first = timer()
@@ -22,17 +31,13 @@ def copy_worker(source, dest, copy_slice, barriers):
     x = dest[copy_slice.start]
     print(x[0, 0])
     barriers[2].wait()
-    
-p = psutil.Process()
-p.cpu_affinity([0])
+
+# p = psutil.Process()
+# p.cpu_affinity([0])
 barriers = [mp.Barrier(N_WORKER + 1) for _ in range(3)]
 print("Allocating source and destination arrays")
 t_alloc = timer()
-dtype = np.dtype(np.float32)
-nbytes = int(np.prod(SHAPE)) * dtype.itemsize
-buf = np.empty(nbytes + 64, dtype=np.uint8)
-start_index = -buf.ctypes.data % 64
-source = buf[start_index:start_index + nbytes].view(dtype).reshape(SHAPE)
+source = byte_aligned(SHAPE, 'float32', offset=16)
 
 # alloc_shape = list(SHAPE)
 # alloc_shape[0] += 4

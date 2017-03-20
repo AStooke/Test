@@ -34,6 +34,8 @@ if SOURCE_SHARED:
 else:
     w = byte_aligned(SHAPE, dtype=DTYPE, offset=0)
 w[:] = 1
+print("w.size: {}, w.sum: {}".format(w.size, w.sum()))
+
 if DEST_SHARED:
     z = np.ctypeslib.as_array(mp.RawArray(TC, size)).reshape(SHAPE)
 else:
@@ -49,4 +51,4 @@ print("alignment % 64 --  w: {},  z: {}".format(aln(w), aln(z)))
 t_start = timer()
 z[:] = w
 t_end = timer()
-print("copy z into w: {} seconds".format(t_end - t_start))
+print("copy w into z: {} seconds".format(t_end - t_start))
