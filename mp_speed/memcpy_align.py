@@ -1,12 +1,14 @@
 
 import numpy as np
 from timeit import default_timer as timer
+import multiprocessing as mp
 
-
-SHAPE = (80000, 100, 100)
+SHAPE = (40000, 100, 100)
 DTYPE = 'float64'
+TC = 'd'
 OFFSET = 0
-
+SOURCE_SHARED = False
+DEST_SHARED = True
 
 def byte_aligned(shape, dtype='float64', alignment=64, offset=0):
     dtype = np.dtype(dtype)
@@ -27,10 +29,16 @@ print("Size of arrays: {} MB".format(dtype.itemsize * size // 1024 // 1024))
 # y = np.empty(SHAPE, dtype=DTYPE)
 # print("x alignment % 64: {}, y alignment: {}".format(aln(x), aln(y)))
 
-w = byte_aligned(SHAPE, dtype=DTYPE, offset=OFFSET)
+if SOURCE_SHARED:
+    w = np.ctypeslib.as_array(mp.RawArray(TC, size)).reshape(SHAPE)
+else:
+    w = byte_aligned(SHAPE, dtype=DTYPE, offset=0)
 w[:] = 1
-z = byte_aligned(SHAPE, dtype=DTYPE, offset=16)
-print("w alignment % 64: {}, z alignment: {}".format(aln(w), aln(z)))
+if DEST_SHARED:
+    z = np.ctypeslib.as_array(mp.RawArray(TC, size)).reshape(SHAPE)
+else:
+    z = byte_aligned(SHAPE, dtype=DTYPE, offset=16)
+print("alignment % 64 --  w: {},  z: {}".format(aln(w), aln(z)))
 
 
 # t_start = timer()
