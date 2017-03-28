@@ -14,6 +14,7 @@ sleeping = " ..sleeping {}".format(SLEEPY)
 
 
 def server(barrier):
+    time.sleep(SLEEPY)
     context = zmq.Context()
     sockets = list()
     for port in PORTS:
