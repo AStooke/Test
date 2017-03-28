@@ -6,8 +6,9 @@ import theano.gpuarray
 from pygpu import collectives as gpu_coll
 import time
 
-N_GPU = 2
+N_GPU = 3
 MASTER = 0
+OP = "sum"
 
 
 def worker(mgr_dict, barrier, rank):
@@ -44,8 +45,9 @@ def master():
 def test_sequence(rank, gpu_comm, barrier):
     my_arr = rank * np.ones([2, 2], dtype='float32')
     s = theano.shared(my_arr)
+    d = theano.shared(my_arr)
     if rank == MASTER:
-        print("Testing all_gather")
+        print("\nTesting all_gather")
         r = gpu_comm.all_gather(s.container.data)
         print(r)
         s.set_value(my_arr)
@@ -53,23 +55,24 @@ def test_sequence(rank, gpu_comm, barrier):
         print("all_gather test complete")
         time.sleep(1)
 
-        print("Testing all_reduce")
-        r = gpu_comm.all_reduce(s.container.data, op="sum")
+        print("\nTesting all_reduce, op: {}".format(OP))
+        r = gpu_comm.all_reduce(s.container.data, op=OP)
         print(r)
         s.set_value(my_arr)
         barrier.wait()
         print("all_reduce test complete")
         time.sleep(1)
 
-        print("Testing broadcast")
+        print("\nTesting broadcast")
         gpu_comm.broadcast(s.container.data)
         s.set_value(my_arr)
         barrier.wait()
         print("broadcast test complete")
         time.sleep(1)
 
-        print("Testing reduce")
-        r = gpu_comm.reduce(src=s.container.data, op="sum")
+        print("\nTesting reduce, op: {}".format(OP))
+        
+        r = gpu_comm.reduce(src=s.container.data, op=OP)
         print(r)
         s.set_value(my_arr)
         barrier.wait()
@@ -81,16 +84,16 @@ def test_sequence(rank, gpu_comm, barrier):
         s.set_value(my_arr)
         barrier.wait()
         time.sleep(1)
-        gpu_comm.all_reduce(s.container.data, op="sum")
+        gpu_comm.all_reduce(s.container.data, op=OP)
         s.set_value(my_arr)
         barrier.wait()
         time.sleep(1)
         gpu_comm.broadcast(s.container.data, root=MASTER)
-        print("worker after broadcast: \n{}".format(s.get_value()))
+        print("\nworker {} after broadcast: \n{}".format(rank, s.get_value()))
         s.set_value(my_arr)
         barrier.wait()
         time.sleep(1)
-        gpu_comm.reduce(src=s.container.data, op="sum", root=MASTER)
+        gpu_comm.reduce(src=s.container.data, op=OP, root=MASTER)
         s.set_value(my_arr)
         barrier.wait()
         time.sleep(1)
