@@ -20,7 +20,8 @@ class MakeArrIdxs(Op):
             assert all(isinstance(i, int) for i in slc_or_lst)
             assert stop is None
             assert step is None
-            inp = list(slc_or_lst)
+            if isinstance(slc_or_lst, tuple):
+                inp = list(slc_or_lst)  # (don't copy if already list)
         else:
             if isinstance(slc_or_lst, slice):
                 assert stop is None
@@ -32,7 +33,7 @@ class MakeArrIdxs(Op):
         return Apply(self, inp, [arr_idxs_type()])
 
     def perform(self, node, inp, out_):
-        # Uses tuple vs list to know whether to make slice or list
+        # Uses tuple vs list to know whether to make slice or pass the list
         out, = out_
         if isinstance(inp, tuple):
             out[0] = slice(*inp)
@@ -52,7 +53,7 @@ class ArrIdxsType(Type):
             return x
         if isinstance(x, (list, tuple)):
             if not all(isinstance(i, int) for i in x):
-                raise TypeError("Elements of list must be int type.")
+                raise TypeError("Elements of list must be type int.")
             return x
         else:
             raise TypeError("Expected a slice or a list/tuple of ints.")
