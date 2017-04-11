@@ -14,26 +14,31 @@ class MakeArrIdxs(Op):
 
     __props__ = ()
 
-    def make_node(self, slc_or_lst, stop=None, step=None):
-        # Uses tuple vs list to tell whether object is slice or list
-        if isinstance(slc_or_lst, (list, tuple)):
-            assert all(isinstance(i, int) for i in slc_or_lst)
+    def make_node(self, arr_idxs, stop=None, step=None):
+        # Uses tuple type to tell whether to make slice
+        if arr_idxs is None or isinstance(arr_idxs, int):
+            slc = [arr_idxs, stop, step]
+            inp = tuple(map(as_int_none_variable, slc))
+        else:
             assert stop is None
             assert step is None
-            if isinstance(slc_or_lst, tuple):
-                inp = list(slc_or_lst)  # (don't copy if already list)
-        else:
-            if isinstance(slc_or_lst, slice):
-                assert stop is None
-                assert step is None
-                inp = [slc_or_lst.start, slc_or_lst.stop, slc_or_lst.step]
-            else:
-                inp = [slc_or_lst, stop, step]
-            inp = tuple(map(as_int_none_variable, inp))
+            if isinstance(arr_idxs, slice):
+                slc = [arr_idxs.start, arr_idxs.stop, arr_idxs.step]
+                inp = tuple(map(as_int_none_variable, slc))
+            elif isinstance(arr_idxs, list):
+                assert all(isinstance(i, int) for i in arr_idxs)
+                inp = arr_idxs
+            elif isinstance(arr_idxs, tuple):
+                assert all(isinstance(i, int) for i in arr_idxs)
+                inp = list(arr_idxs)
+            elif isinstance(arr_idxs, np.ndarray):
+                assert arr_idxs.ndim == 1
+                assert np.issubdtype(arr_idxs[0], int)
+                inp = arr_idxs
         return Apply(self, inp, [arr_idxs_type()])
-
+         
     def perform(self, node, inp, out_):
-        # Uses tuple vs list to know whether to make slice or pass the list
+        # Uses tuple type to know whether to make slice
         out, = out_
         if isinstance(inp, tuple):
             out[0] = slice(*inp)
@@ -55,8 +60,14 @@ class ArrIdxsType(Type):
             if not all(isinstance(i, int) for i in x):
                 raise TypeError("Elements of list must be type int.")
             return x
+        if isinstance(x, np.ndarray):
+            if not x.ndim == 1:
+                raise TypeError("Numpy array must be one-dimensional.")
+            if not np.issubdtype(x[0], int):
+                raise TypeError("Numpy array must be integer dtype.")
+            return x
         else:
-            raise TypeError("Expected a slice or a list/tuple of ints.")
+            raise TypeError("Expected a slice, or a list, tuple, or 1-D numpy array of ints.")
 
     def __str__(self):
         return "arr_idxs_type"
@@ -69,8 +80,11 @@ class ArrIdxsType(Type):
 
     @staticmethod
     def may_share_memory(a, b):
-        # slices and lists/tuples of integers never share memory between objects
-        return isinstance(a, (slice, list, tuple)) and a is b
+        if not isinstance(a, np.ndarray) and not isinstance(b, np.ndarray):
+            # slices and lists/tuples of integers never share memory between objects
+            return a is b
+        else:
+            return np.may_share_memory(a, b)
 
 arr_idxs_type = ArrIdxsType()
 
