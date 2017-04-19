@@ -6,7 +6,7 @@ import theano.gpuarray
 from pygpu import collectives as gpu_coll
 import time
 
-N_GPU = 2
+N_GPU = 8
 MASTER = 0
 OP = "sum"
 
