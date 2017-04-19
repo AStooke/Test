@@ -43,11 +43,11 @@ def master():
 
 
 def test_sequence(rank, gpu_comm, barrier):
-    my_arr = rank * np.ones([2, 2], dtype='float32')
+    my_arr = rank * np.ones([2, 2], dtype=theano.config.floatX)
     s = theano.shared(my_arr)
     d = theano.shared(my_arr)
     if rank == MASTER:
-        my_arr = np.random.randn(3, 3).astype('float32')
+        my_arr = np.random.randn(3, 3).astype(theano.config.floatX)
         s = theano.shared(my_arr)
         print("\nTesting broadcast")
         gpu_comm.broadcast(s.container.data)
@@ -57,7 +57,7 @@ def test_sequence(rank, gpu_comm, barrier):
         print("broadcast test complete")
         time.sleep(1)
     else:
-        my_arr = rank * np.ones([4, 4], dtype='float32')
+        my_arr = rank * np.ones([4, 4], dtype=theano.config.floatX)
         s = theano.shared(my_arr)
         print("worker s.container.data: ", s.container.data)
         gpu_comm.broadcast(s.container.data, root=0)
@@ -68,4 +68,5 @@ def test_sequence(rank, gpu_comm, barrier):
 
 
 if __name__ == "__main__":
+    print("theano.config.floatX: {}".format(theano.config.floatX))
     master()
