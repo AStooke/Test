@@ -1,0 +1,2207 @@
+{
+    "traceEvents": [
+        {
+            "pid": 0,
+            "name": "process_name",
+            "args": {
+                "name": "Allocators"
+            },
+            "ph": "M"
+        },
+        {
+            "pid": 1,
+            "name": "process_name",
+            "args": {
+                "name": "/job:localhost/replica:0/task:0/gpu:0 Compute"
+            },
+            "ph": "M"
+        },
+        {
+            "pid": 2,
+            "name": "process_name",
+            "args": {
+                "name": "/job:localhost/replica:0/task:0/gpu:0 Tensors"
+            },
+            "ph": "M"
+        },
+        {
+            "pid": 3,
+            "name": "process_name",
+            "args": {
+                "name": "/job:localhost/replica:0/task:0/cpu:0 Compute"
+            },
+            "ph": "M"
+        },
+        {
+            "pid": 4,
+            "name": "process_name",
+            "args": {
+                "name": "/job:localhost/replica:0/task:0/cpu:0 Tensors"
+            },
+            "ph": "M"
+        },
+        {
+            "args": {
+                "name": "_SOURCE",
+                "op": "NoOp"
+            },
+            "name": "NoOp",
+            "tid": 0,
+            "ts": 1504747284398285,
+            "dur": 29,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv1/Variable",
+                "op": "VariableV2"
+            },
+            "name": "VariableV2",
+            "tid": 0,
+            "ts": 1504747284398334,
+            "dur": 25,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv1/Variable_1",
+                "op": "VariableV2"
+            },
+            "name": "VariableV2",
+            "tid": 0,
+            "ts": 1504747284398361,
+            "dur": 7,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv2/Variable",
+                "op": "VariableV2"
+            },
+            "name": "VariableV2",
+            "tid": 0,
+            "ts": 1504747284398369,
+            "dur": 6,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv2/Variable_1",
+                "op": "VariableV2"
+            },
+            "name": "VariableV2",
+            "tid": 0,
+            "ts": 1504747284398376,
+            "dur": 16,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv3/Variable",
+                "op": "VariableV2"
+            },
+            "name": "VariableV2",
+            "tid": 0,
+            "ts": 1504747284398394,
+            "dur": 15,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv3/Variable_1",
+                "op": "VariableV2"
+            },
+            "name": "VariableV2",
+            "tid": 0,
+            "ts": 1504747284398411,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "Reshape/shape",
+                "op": "Const"
+            },
+            "name": "Const",
+            "tid": 0,
+            "ts": 1504747284398417,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "fc1/Variable",
+                "op": "VariableV2"
+            },
+            "name": "VariableV2",
+            "tid": 0,
+            "ts": 1504747284398424,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "fc1/Variable_1",
+                "op": "VariableV2"
+            },
+            "name": "VariableV2",
+            "tid": 0,
+            "ts": 1504747284398430,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "fc2/Variable",
+                "op": "VariableV2"
+            },
+            "name": "VariableV2",
+            "tid": 0,
+            "ts": 1504747284398435,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "fc2/Variable_1",
+                "op": "VariableV2"
+            },
+            "name": "VariableV2",
+            "tid": 0,
+            "ts": 1504747284398451,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/Mean_grad/Shape_2",
+                "op": "Const"
+            },
+            "name": "Const",
+            "tid": 0,
+            "ts": 1504747284398457,
+            "dur": 3,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/Mean_grad/Const",
+                "op": "Const"
+            },
+            "name": "Const",
+            "tid": 0,
+            "ts": 1504747284398462,
+            "dur": 3,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/Mean_grad/Maximum/y",
+                "op": "Const"
+            },
+            "name": "Const",
+            "tid": 0,
+            "ts": 1504747284398467,
+            "dur": 3,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/loss/SparseSoftmaxCrossEntropyWithLogits/SparseSoftmaxCrossEntropyWithLogits_grad/ExpandDims/dim",
+                "op": "Const"
+            },
+            "name": "Const",
+            "tid": 0,
+            "ts": 1504747284398471,
+            "dur": 6,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc2/add_grad/Shape_1",
+                "op": "Const"
+            },
+            "name": "Const",
+            "tid": 0,
+            "ts": 1504747284398478,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc1/add_grad/Shape_1",
+                "op": "Const"
+            },
+            "name": "Const",
+            "tid": 0,
+            "ts": 1504747284398483,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv3/Conv2D_grad/Shape_1",
+                "op": "Const"
+            },
+            "name": "Const",
+            "tid": 0,
+            "ts": 1504747284398488,
+            "dur": 3,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv2/Conv2D_grad/Shape_1",
+                "op": "Const"
+            },
+            "name": "Const",
+            "tid": 0,
+            "ts": 1504747284398492,
+            "dur": 6,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv1/Conv2D_grad/Shape_1",
+                "op": "Const"
+            },
+            "name": "Const",
+            "tid": 0,
+            "ts": 1504747284398499,
+            "dur": 3,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/GradientDescent/learning_rate",
+                "op": "Const"
+            },
+            "name": "Const",
+            "tid": 0,
+            "ts": 1504747284398503,
+            "dur": 3,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/Mean_grad/Reshape/_0__cf__0",
+                "op": "Const"
+            },
+            "name": "Const",
+            "tid": 0,
+            "ts": 1504747284398507,
+            "dur": 3,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv1/Variable/read",
+                "op": "Identity",
+                "input0": "conv1/Variable"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284398511,
+            "dur": 7,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv1/Variable_1/read",
+                "op": "Identity",
+                "input0": "conv1/Variable_1"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284398520,
+            "dur": 3,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv2/Variable/read",
+                "op": "Identity",
+                "input0": "conv2/Variable"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284398524,
+            "dur": 3,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv2/Variable_1/read",
+                "op": "Identity",
+                "input0": "conv2/Variable_1"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284398529,
+            "dur": 3,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv3/Variable/read",
+                "op": "Identity",
+                "input0": "conv3/Variable"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284398536,
+            "dur": 3,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv3/Variable_1/read",
+                "op": "Identity",
+                "input0": "conv3/Variable_1"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284398540,
+            "dur": 3,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "fc1/Variable/read",
+                "op": "Identity",
+                "input0": "fc1/Variable"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284398545,
+            "dur": 3,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "fc1/Variable_1/read",
+                "op": "Identity",
+                "input0": "fc1/Variable_1"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284398549,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "fc2/Variable/read",
+                "op": "Identity",
+                "input0": "fc2/Variable"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284398556,
+            "dur": 3,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "fc2/Variable_1/read",
+                "op": "Identity",
+                "input0": "fc2/Variable_1"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284398560,
+            "dur": 3,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv1/Conv2D_grad/Shape",
+                "op": "Shape",
+                "input0": "_arg_input_0_0/_9"
+            },
+            "name": "Shape",
+            "tid": 0,
+            "ts": 1504747284398920,
+            "dur": 18,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "name": "_arg_input_0_0",
+            "tid": 0,
+            "ts": 1504747284398354,
+            "cat": "DataFlow",
+            "pid": 3,
+            "id": 0,
+            "ph": "s"
+        },
+        {
+            "name": "_arg_input_0_0",
+            "tid": 0,
+            "ts": 1504747284398920,
+            "cat": "DataFlow",
+            "pid": 1,
+            "id": 0,
+            "ph": "t"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/Mean_grad/Prod_1",
+                "op": "Prod",
+                "input0": "sgd_optimizer/gradients/Mean_grad/Shape_2/_5",
+                "input1": "sgd_optimizer/gradients/Mean_grad/Const_1"
+            },
+            "name": "Prod",
+            "tid": 0,
+            "ts": 1504747284398969,
+            "dur": 101,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv1/Conv2D",
+                "op": "Conv2D",
+                "input0": "_arg_input_0_0/_9",
+                "input1": "conv1/Variable/read"
+            },
+            "name": "Conv2D",
+            "tid": 1,
+            "ts": 1504747284398943,
+            "dur": 172,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "name": "_arg_input_0_0",
+            "tid": 0,
+            "ts": 1504747284398354,
+            "cat": "DataFlow",
+            "pid": 3,
+            "id": 1,
+            "ph": "s"
+        },
+        {
+            "name": "_arg_input_0_0",
+            "tid": 1,
+            "ts": 1504747284398943,
+            "cat": "DataFlow",
+            "pid": 1,
+            "id": 1,
+            "ph": "t"
+        },
+        {
+            "name": "conv1/Variable/read",
+            "tid": 0,
+            "ts": 1504747284398518,
+            "cat": "DataFlow",
+            "pid": 1,
+            "id": 2,
+            "ph": "s"
+        },
+        {
+            "name": "conv1/Variable/read",
+            "tid": 1,
+            "ts": 1504747284398943,
+            "cat": "DataFlow",
+            "pid": 1,
+            "id": 2,
+            "ph": "t"
+        },
+        {
+            "args": {
+                "name": "conv1/BiasAdd",
+                "op": "BiasAdd",
+                "input0": "conv1/Conv2D",
+                "input1": "conv1/Variable_1/read"
+            },
+            "name": "BiasAdd",
+            "tid": 0,
+            "ts": 1504747284399126,
+            "dur": 51,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "name": "conv1/Conv2D",
+            "tid": 1,
+            "ts": 1504747284399115,
+            "cat": "DataFlow",
+            "pid": 1,
+            "id": 3,
+            "ph": "s"
+        },
+        {
+            "name": "conv1/Conv2D",
+            "tid": 0,
+            "ts": 1504747284399126,
+            "cat": "DataFlow",
+            "pid": 1,
+            "id": 3,
+            "ph": "t"
+        },
+        {
+            "args": {
+                "name": "conv1/Relu",
+                "op": "Relu",
+                "input0": "conv1/BiasAdd"
+            },
+            "name": "Relu",
+            "tid": 0,
+            "ts": 1504747284399180,
+            "dur": 29,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv2/Conv2D_grad/Shape",
+                "op": "Shape",
+                "input0": "conv1/Relu"
+            },
+            "name": "Shape",
+            "tid": 0,
+            "ts": 1504747284399212,
+            "dur": 15,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/Mean_grad/Maximum",
+                "op": "Maximum",
+                "input0": "sgd_optimizer/gradients/Mean_grad/Prod_1/_7",
+                "input1": "sgd_optimizer/gradients/Mean_grad/Maximum/y"
+            },
+            "name": "Maximum",
+            "tid": 1,
+            "ts": 1504747284399219,
+            "dur": 21,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "name": "sgd_optimizer/gradients/Mean_grad/Prod_1",
+            "tid": 0,
+            "ts": 1504747284399070,
+            "cat": "DataFlow",
+            "pid": 1,
+            "id": 4,
+            "ph": "s"
+        },
+        {
+            "name": "sgd_optimizer/gradients/Mean_grad/Prod_1",
+            "tid": 1,
+            "ts": 1504747284399219,
+            "cat": "DataFlow",
+            "pid": 1,
+            "id": 4,
+            "ph": "t"
+        },
+        {
+            "name": "sgd_optimizer/gradients/Mean_grad/Maximum/y",
+            "tid": 0,
+            "ts": 1504747284398470,
+            "cat": "DataFlow",
+            "pid": 1,
+            "id": 5,
+            "ph": "s"
+        },
+        {
+            "name": "sgd_optimizer/gradients/Mean_grad/Maximum/y",
+            "tid": 1,
+            "ts": 1504747284399219,
+            "cat": "DataFlow",
+            "pid": 1,
+            "id": 5,
+            "ph": "t"
+        },
+        {
+            "args": {
+                "name": "conv2/Conv2D",
+                "op": "Conv2D",
+                "input0": "conv1/Relu",
+                "input1": "conv2/Variable/read"
+            },
+            "name": "Conv2D",
+            "tid": 0,
+            "ts": 1504747284399229,
+            "dur": 111,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv2/BiasAdd",
+                "op": "BiasAdd",
+                "input0": "conv2/Conv2D",
+                "input1": "conv2/Variable_1/read"
+            },
+            "name": "BiasAdd",
+            "tid": 0,
+            "ts": 1504747284399346,
+            "dur": 24,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv2/Relu",
+                "op": "Relu",
+                "input0": "conv2/BiasAdd"
+            },
+            "name": "Relu",
+            "tid": 0,
+            "ts": 1504747284399373,
+            "dur": 16,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv3/Conv2D_grad/Shape",
+                "op": "Shape",
+                "input0": "conv2/Relu"
+            },
+            "name": "Shape",
+            "tid": 0,
+            "ts": 1504747284399391,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv3/Conv2D",
+                "op": "Conv2D",
+                "input0": "conv2/Relu",
+                "input1": "conv3/Variable/read"
+            },
+            "name": "Conv2D",
+            "tid": 0,
+            "ts": 1504747284399397,
+            "dur": 68,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv3/BiasAdd",
+                "op": "BiasAdd",
+                "input0": "conv3/Conv2D",
+                "input1": "conv3/Variable_1/read"
+            },
+            "name": "BiasAdd",
+            "tid": 0,
+            "ts": 1504747284399470,
+            "dur": 20,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "conv3/Relu",
+                "op": "Relu",
+                "input0": "conv3/BiasAdd"
+            },
+            "name": "Relu",
+            "tid": 0,
+            "ts": 1504747284399492,
+            "dur": 19,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/Reshape_grad/Shape",
+                "op": "Shape",
+                "input0": "conv3/Relu"
+            },
+            "name": "Shape",
+            "tid": 0,
+            "ts": 1504747284399513,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "Reshape",
+                "op": "Reshape",
+                "input0": "conv3/Relu",
+                "input1": "Reshape/shape"
+            },
+            "name": "Reshape",
+            "tid": 0,
+            "ts": 1504747284399519,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "fc1/MatMul",
+                "op": "MatMul",
+                "input0": "Reshape",
+                "input1": "fc1/Variable/read"
+            },
+            "name": "MatMul",
+            "tid": 0,
+            "ts": 1504747284399526,
+            "dur": 70,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc1/add_grad/Shape",
+                "op": "Shape",
+                "input0": "fc1/MatMul"
+            },
+            "name": "Shape",
+            "tid": 0,
+            "ts": 1504747284399600,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "fc1/add",
+                "op": "Add",
+                "input0": "fc1/MatMul",
+                "input1": "fc1/Variable_1/read"
+            },
+            "name": "Add",
+            "tid": 0,
+            "ts": 1504747284399607,
+            "dur": 27,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc1/add_grad/BroadcastGradientArgs",
+                "op": "BroadcastGradientArgs",
+                "input0": "sgd_optimizer/gradients/fc1/add_grad/Shape",
+                "input1": "sgd_optimizer/gradients/fc1/add_grad/Shape_1"
+            },
+            "name": "BroadcastGradientArgs",
+            "tid": 0,
+            "ts": 1504747284399636,
+            "dur": 9,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "fc1/Relu",
+                "op": "Relu",
+                "input0": "fc1/add"
+            },
+            "name": "Relu",
+            "tid": 0,
+            "ts": 1504747284399647,
+            "dur": 16,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "fc2/MatMul",
+                "op": "MatMul",
+                "input0": "fc1/Relu",
+                "input1": "fc2/Variable/read"
+            },
+            "name": "MatMul",
+            "tid": 0,
+            "ts": 1504747284399665,
+            "dur": 27,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc2/add_grad/Shape",
+                "op": "Shape",
+                "input0": "fc2/MatMul"
+            },
+            "name": "Shape",
+            "tid": 0,
+            "ts": 1504747284399694,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "fc2/add",
+                "op": "Add",
+                "input0": "fc2/MatMul",
+                "input1": "fc2/Variable_1/read"
+            },
+            "name": "Add",
+            "tid": 0,
+            "ts": 1504747284399701,
+            "dur": 17,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc2/add_grad/BroadcastGradientArgs",
+                "op": "BroadcastGradientArgs",
+                "input0": "sgd_optimizer/gradients/fc2/add_grad/Shape",
+                "input1": "sgd_optimizer/gradients/fc2/add_grad/Shape_1"
+            },
+            "name": "BroadcastGradientArgs",
+            "tid": 0,
+            "ts": 1504747284399720,
+            "dur": 7,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "loss/SparseSoftmaxCrossEntropyWithLogits/SparseSoftmaxCrossEntropyWithLogits",
+                "op": "SparseSoftmaxCrossEntropyWithLogits",
+                "input0": "fc2/add",
+                "input1": "_arg_target_0_1/_11"
+            },
+            "name": "SparseSoftmaxCrossEntropyWithLogits",
+            "tid": 0,
+            "ts": 1504747284399729,
+            "dur": 73,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "name": "_arg_target_0_1",
+            "tid": 0,
+            "ts": 1504747284398383,
+            "cat": "DataFlow",
+            "pid": 3,
+            "id": 6,
+            "ph": "s"
+        },
+        {
+            "name": "_arg_target_0_1",
+            "tid": 0,
+            "ts": 1504747284399729,
+            "cat": "DataFlow",
+            "pid": 1,
+            "id": 6,
+            "ph": "t"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/Mean_grad/Shape",
+                "op": "Shape",
+                "input0": "loss/SparseSoftmaxCrossEntropyWithLogits/SparseSoftmaxCrossEntropyWithLogits"
+            },
+            "name": "Shape",
+            "tid": 0,
+            "ts": 1504747284399805,
+            "dur": 9,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/loss/SparseSoftmaxCrossEntropyWithLogits/SparseSoftmaxCrossEntropyWithLogits_grad/PreventGradient",
+                "op": "PreventGradient",
+                "input0": "loss/SparseSoftmaxCrossEntropyWithLogits/SparseSoftmaxCrossEntropyWithLogits:1"
+            },
+            "name": "PreventGradient",
+            "tid": 0,
+            "ts": 1504747284399818,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/Mean_grad/Tile",
+                "op": "Tile",
+                "input0": "sgd_optimizer/gradients/Mean_grad/Reshape",
+                "input1": "sgd_optimizer/gradients/Mean_grad/Shape"
+            },
+            "name": "Tile",
+            "tid": 0,
+            "ts": 1504747284399823,
+            "dur": 22,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/Mean_grad/Prod",
+                "op": "Prod",
+                "input0": "sgd_optimizer/gradients/Mean_grad/Shape_1/_13",
+                "input1": "sgd_optimizer/gradients/Mean_grad/Const"
+            },
+            "name": "Prod",
+            "tid": 0,
+            "ts": 1504747284399918,
+            "dur": 8,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/Mean_grad/floordiv",
+                "op": "FloorDiv",
+                "input0": "sgd_optimizer/gradients/Mean_grad/Prod/_15",
+                "input1": "sgd_optimizer/gradients/Mean_grad/Maximum"
+            },
+            "name": "FloorDiv",
+            "tid": 0,
+            "ts": 1504747284399997,
+            "dur": 35,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "name": "sgd_optimizer/gradients/Mean_grad/Maximum",
+            "tid": 1,
+            "ts": 1504747284399240,
+            "cat": "DataFlow",
+            "pid": 1,
+            "id": 7,
+            "ph": "s"
+        },
+        {
+            "name": "sgd_optimizer/gradients/Mean_grad/Maximum",
+            "tid": 0,
+            "ts": 1504747284399997,
+            "cat": "DataFlow",
+            "pid": 1,
+            "id": 7,
+            "ph": "t"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/Mean_grad/Cast",
+                "op": "Cast",
+                "input0": "sgd_optimizer/gradients/Mean_grad/floordiv/_17"
+            },
+            "name": "Cast",
+            "tid": 0,
+            "ts": 1504747284400163,
+            "dur": 78,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/Mean_grad/truediv",
+                "op": "RealDiv",
+                "input0": "sgd_optimizer/gradients/Mean_grad/Tile",
+                "input1": "sgd_optimizer/gradients/Mean_grad/Cast"
+            },
+            "name": "RealDiv",
+            "tid": 0,
+            "ts": 1504747284400250,
+            "dur": 55,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/loss/SparseSoftmaxCrossEntropyWithLogits/SparseSoftmaxCrossEntropyWithLogits_grad/ExpandDims",
+                "op": "ExpandDims",
+                "input0": "sgd_optimizer/gradients/Mean_grad/truediv",
+                "input1": "sgd_optimizer/gradients/loss/SparseSoftmaxCrossEntropyWithLogits/SparseSoftmaxCrossEntropyWithLogits_grad/ExpandDims/dim"
+            },
+            "name": "ExpandDims",
+            "tid": 0,
+            "ts": 1504747284400311,
+            "dur": 13,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/loss/SparseSoftmaxCrossEntropyWithLogits/SparseSoftmaxCrossEntropyWithLogits_grad/mul",
+                "op": "Mul",
+                "input0": "sgd_optimizer/gradients/loss/SparseSoftmaxCrossEntropyWithLogits/SparseSoftmaxCrossEntropyWithLogits_grad/ExpandDims",
+                "input1": "sgd_optimizer/gradients/loss/SparseSoftmaxCrossEntropyWithLogits/SparseSoftmaxCrossEntropyWithLogits_grad/PreventGradient"
+            },
+            "name": "Mul",
+            "tid": 0,
+            "ts": 1504747284400328,
+            "dur": 49,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc2/add_grad/Sum",
+                "op": "Sum",
+                "input0": "sgd_optimizer/gradients/loss/SparseSoftmaxCrossEntropyWithLogits/SparseSoftmaxCrossEntropyWithLogits_grad/mul",
+                "input1": "sgd_optimizer/gradients/fc2/add_grad/BroadcastGradientArgs"
+            },
+            "name": "Sum",
+            "tid": 0,
+            "ts": 1504747284400394,
+            "dur": 9,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc2/add_grad/Sum_1",
+                "op": "Sum",
+                "input0": "sgd_optimizer/gradients/loss/SparseSoftmaxCrossEntropyWithLogits/SparseSoftmaxCrossEntropyWithLogits_grad/mul",
+                "input1": "sgd_optimizer/gradients/fc2/add_grad/BroadcastGradientArgs:1"
+            },
+            "name": "Sum",
+            "tid": 0,
+            "ts": 1504747284400406,
+            "dur": 39,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc2/add_grad/Reshape",
+                "op": "Reshape",
+                "input0": "sgd_optimizer/gradients/fc2/add_grad/Sum",
+                "input1": "sgd_optimizer/gradients/fc2/add_grad/Shape"
+            },
+            "name": "Reshape",
+            "tid": 0,
+            "ts": 1504747284400448,
+            "dur": 8,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc2/add_grad/Reshape_1",
+                "op": "Reshape",
+                "input0": "sgd_optimizer/gradients/fc2/add_grad/Sum_1",
+                "input1": "sgd_optimizer/gradients/fc2/add_grad/Shape_1"
+            },
+            "name": "Reshape",
+            "tid": 0,
+            "ts": 1504747284400458,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc2/add_grad/tuple/group_deps",
+                "op": "NoOp",
+                "input0": "^sgd_optimizer/gradients/fc2/add_grad/Reshape",
+                "input1": "^sgd_optimizer/gradients/fc2/add_grad/Reshape_1"
+            },
+            "name": "NoOp",
+            "tid": 0,
+            "ts": 1504747284400465,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc2/add_grad/tuple/control_dependency",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/fc2/add_grad/Reshape",
+                "input1": "^sgd_optimizer/gradients/fc2/add_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284400471,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc2/add_grad/tuple/control_dependency_1",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/fc2/add_grad/Reshape_1",
+                "input1": "^sgd_optimizer/gradients/fc2/add_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284400478,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc2/MatMul_grad/MatMul",
+                "op": "MatMul",
+                "input0": "sgd_optimizer/gradients/fc2/add_grad/tuple/control_dependency",
+                "input1": "fc2/Variable/read"
+            },
+            "name": "MatMul",
+            "tid": 0,
+            "ts": 1504747284400484,
+            "dur": 43,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc2/MatMul_grad/MatMul_1",
+                "op": "MatMul",
+                "input0": "fc1/Relu",
+                "input1": "sgd_optimizer/gradients/fc2/add_grad/tuple/control_dependency"
+            },
+            "name": "MatMul",
+            "tid": 0,
+            "ts": 1504747284400531,
+            "dur": 37,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "input2": "sgd_optimizer/gradients/fc2/add_grad/tuple/control_dependency_1",
+                "name": "sgd_optimizer/GradientDescent/update_fc2/Variable_1/ApplyGradientDescent",
+                "op": "ApplyGradientDescent",
+                "input0": "fc2/Variable_1",
+                "input1": "sgd_optimizer/GradientDescent/learning_rate"
+            },
+            "name": "ApplyGradientDescent",
+            "tid": 0,
+            "ts": 1504747284400572,
+            "dur": 37,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc2/MatMul_grad/tuple/group_deps",
+                "op": "NoOp",
+                "input0": "^sgd_optimizer/gradients/fc2/MatMul_grad/MatMul",
+                "input1": "^sgd_optimizer/gradients/fc2/MatMul_grad/MatMul_1"
+            },
+            "name": "NoOp",
+            "tid": 0,
+            "ts": 1504747284400612,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc2/MatMul_grad/tuple/control_dependency",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/fc2/MatMul_grad/MatMul",
+                "input1": "^sgd_optimizer/gradients/fc2/MatMul_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284400619,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc2/MatMul_grad/tuple/control_dependency_1",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/fc2/MatMul_grad/MatMul_1",
+                "input1": "^sgd_optimizer/gradients/fc2/MatMul_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284400627,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc1/Relu_grad/ReluGrad",
+                "op": "ReluGrad",
+                "input0": "sgd_optimizer/gradients/fc2/MatMul_grad/tuple/control_dependency",
+                "input1": "fc1/Relu"
+            },
+            "name": "ReluGrad",
+            "tid": 0,
+            "ts": 1504747284400633,
+            "dur": 30,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "input2": "sgd_optimizer/gradients/fc2/MatMul_grad/tuple/control_dependency_1",
+                "name": "sgd_optimizer/GradientDescent/update_fc2/Variable/ApplyGradientDescent",
+                "op": "ApplyGradientDescent",
+                "input0": "fc2/Variable",
+                "input1": "sgd_optimizer/GradientDescent/learning_rate"
+            },
+            "name": "ApplyGradientDescent",
+            "tid": 0,
+            "ts": 1504747284400666,
+            "dur": 26,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc1/add_grad/Sum",
+                "op": "Sum",
+                "input0": "sgd_optimizer/gradients/fc1/Relu_grad/ReluGrad",
+                "input1": "sgd_optimizer/gradients/fc1/add_grad/BroadcastGradientArgs"
+            },
+            "name": "Sum",
+            "tid": 0,
+            "ts": 1504747284400696,
+            "dur": 6,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc1/add_grad/Sum_1",
+                "op": "Sum",
+                "input0": "sgd_optimizer/gradients/fc1/Relu_grad/ReluGrad",
+                "input1": "sgd_optimizer/gradients/fc1/add_grad/BroadcastGradientArgs:1"
+            },
+            "name": "Sum",
+            "tid": 0,
+            "ts": 1504747284400705,
+            "dur": 31,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc1/add_grad/Reshape",
+                "op": "Reshape",
+                "input0": "sgd_optimizer/gradients/fc1/add_grad/Sum",
+                "input1": "sgd_optimizer/gradients/fc1/add_grad/Shape"
+            },
+            "name": "Reshape",
+            "tid": 0,
+            "ts": 1504747284400739,
+            "dur": 6,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc1/add_grad/Reshape_1",
+                "op": "Reshape",
+                "input0": "sgd_optimizer/gradients/fc1/add_grad/Sum_1",
+                "input1": "sgd_optimizer/gradients/fc1/add_grad/Shape_1"
+            },
+            "name": "Reshape",
+            "tid": 0,
+            "ts": 1504747284400748,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc1/add_grad/tuple/group_deps",
+                "op": "NoOp",
+                "input0": "^sgd_optimizer/gradients/fc1/add_grad/Reshape",
+                "input1": "^sgd_optimizer/gradients/fc1/add_grad/Reshape_1"
+            },
+            "name": "NoOp",
+            "tid": 0,
+            "ts": 1504747284400755,
+            "dur": 3,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc1/add_grad/tuple/control_dependency",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/fc1/add_grad/Reshape",
+                "input1": "^sgd_optimizer/gradients/fc1/add_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284400760,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc1/add_grad/tuple/control_dependency_1",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/fc1/add_grad/Reshape_1",
+                "input1": "^sgd_optimizer/gradients/fc1/add_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284400766,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc1/MatMul_grad/MatMul",
+                "op": "MatMul",
+                "input0": "sgd_optimizer/gradients/fc1/add_grad/tuple/control_dependency",
+                "input1": "fc1/Variable/read"
+            },
+            "name": "MatMul",
+            "tid": 0,
+            "ts": 1504747284400773,
+            "dur": 80,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc1/MatMul_grad/MatMul_1",
+                "op": "MatMul",
+                "input0": "Reshape",
+                "input1": "sgd_optimizer/gradients/fc1/add_grad/tuple/control_dependency"
+            },
+            "name": "MatMul",
+            "tid": 0,
+            "ts": 1504747284400864,
+            "dur": 47,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "input2": "sgd_optimizer/gradients/fc1/add_grad/tuple/control_dependency_1",
+                "name": "sgd_optimizer/GradientDescent/update_fc1/Variable_1/ApplyGradientDescent",
+                "op": "ApplyGradientDescent",
+                "input0": "fc1/Variable_1",
+                "input1": "sgd_optimizer/GradientDescent/learning_rate"
+            },
+            "name": "ApplyGradientDescent",
+            "tid": 0,
+            "ts": 1504747284400918,
+            "dur": 32,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc1/MatMul_grad/tuple/group_deps",
+                "op": "NoOp",
+                "input0": "^sgd_optimizer/gradients/fc1/MatMul_grad/MatMul",
+                "input1": "^sgd_optimizer/gradients/fc1/MatMul_grad/MatMul_1"
+            },
+            "name": "NoOp",
+            "tid": 0,
+            "ts": 1504747284400955,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc1/MatMul_grad/tuple/control_dependency",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/fc1/MatMul_grad/MatMul",
+                "input1": "^sgd_optimizer/gradients/fc1/MatMul_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284400961,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/fc1/MatMul_grad/tuple/control_dependency_1",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/fc1/MatMul_grad/MatMul_1",
+                "input1": "^sgd_optimizer/gradients/fc1/MatMul_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284400968,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/Reshape_grad/Reshape",
+                "op": "Reshape",
+                "input0": "sgd_optimizer/gradients/fc1/MatMul_grad/tuple/control_dependency",
+                "input1": "sgd_optimizer/gradients/Reshape_grad/Shape"
+            },
+            "name": "Reshape",
+            "tid": 0,
+            "ts": 1504747284400975,
+            "dur": 7,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "input2": "sgd_optimizer/gradients/fc1/MatMul_grad/tuple/control_dependency_1",
+                "name": "sgd_optimizer/GradientDescent/update_fc1/Variable/ApplyGradientDescent",
+                "op": "ApplyGradientDescent",
+                "input0": "fc1/Variable",
+                "input1": "sgd_optimizer/GradientDescent/learning_rate"
+            },
+            "name": "ApplyGradientDescent",
+            "tid": 0,
+            "ts": 1504747284400985,
+            "dur": 28,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv3/Relu_grad/ReluGrad",
+                "op": "ReluGrad",
+                "input0": "sgd_optimizer/gradients/Reshape_grad/Reshape",
+                "input1": "conv3/Relu"
+            },
+            "name": "ReluGrad",
+            "tid": 0,
+            "ts": 1504747284401028,
+            "dur": 33,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv3/BiasAdd_grad/BiasAddGrad",
+                "op": "BiasAddGrad",
+                "input0": "sgd_optimizer/gradients/conv3/Relu_grad/ReluGrad"
+            },
+            "name": "BiasAddGrad",
+            "tid": 0,
+            "ts": 1504747284401064,
+            "dur": 51,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv3/BiasAdd_grad/tuple/group_deps",
+                "op": "NoOp",
+                "input0": "^sgd_optimizer/gradients/conv3/Relu_grad/ReluGrad",
+                "input1": "^sgd_optimizer/gradients/conv3/BiasAdd_grad/BiasAddGrad"
+            },
+            "name": "NoOp",
+            "tid": 0,
+            "ts": 1504747284401118,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv3/BiasAdd_grad/tuple/control_dependency",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/conv3/Relu_grad/ReluGrad",
+                "input1": "^sgd_optimizer/gradients/conv3/BiasAdd_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284401126,
+            "dur": 10,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv3/BiasAdd_grad/tuple/control_dependency_1",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/conv3/BiasAdd_grad/BiasAddGrad",
+                "input1": "^sgd_optimizer/gradients/conv3/BiasAdd_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284401139,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "input2": "sgd_optimizer/gradients/conv3/BiasAdd_grad/tuple/control_dependency",
+                "name": "sgd_optimizer/gradients/conv3/Conv2D_grad/Conv2DBackpropInput",
+                "op": "Conv2DBackpropInput",
+                "input0": "sgd_optimizer/gradients/conv3/Conv2D_grad/Shape",
+                "input1": "conv3/Variable/read"
+            },
+            "name": "Conv2DBackpropInput",
+            "tid": 0,
+            "ts": 1504747284401146,
+            "dur": 126,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "input2": "sgd_optimizer/gradients/conv3/BiasAdd_grad/tuple/control_dependency",
+                "name": "sgd_optimizer/gradients/conv3/Conv2D_grad/Conv2DBackpropFilter",
+                "op": "Conv2DBackpropFilter",
+                "input0": "conv2/Relu",
+                "input1": "sgd_optimizer/gradients/conv3/Conv2D_grad/Shape_1"
+            },
+            "name": "Conv2DBackpropFilter",
+            "tid": 0,
+            "ts": 1504747284401281,
+            "dur": 154,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "input2": "sgd_optimizer/gradients/conv3/BiasAdd_grad/tuple/control_dependency_1",
+                "name": "sgd_optimizer/GradientDescent/update_conv3/Variable_1/ApplyGradientDescent",
+                "op": "ApplyGradientDescent",
+                "input0": "conv3/Variable_1",
+                "input1": "sgd_optimizer/GradientDescent/learning_rate"
+            },
+            "name": "ApplyGradientDescent",
+            "tid": 0,
+            "ts": 1504747284401445,
+            "dur": 32,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv3/Conv2D_grad/tuple/group_deps",
+                "op": "NoOp",
+                "input0": "^sgd_optimizer/gradients/conv3/Conv2D_grad/Conv2DBackpropInput",
+                "input1": "^sgd_optimizer/gradients/conv3/Conv2D_grad/Conv2DBackpropFilter"
+            },
+            "name": "NoOp",
+            "tid": 0,
+            "ts": 1504747284401482,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv3/Conv2D_grad/tuple/control_dependency",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/conv3/Conv2D_grad/Conv2DBackpropInput",
+                "input1": "^sgd_optimizer/gradients/conv3/Conv2D_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284401489,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv3/Conv2D_grad/tuple/control_dependency_1",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/conv3/Conv2D_grad/Conv2DBackpropFilter",
+                "input1": "^sgd_optimizer/gradients/conv3/Conv2D_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284401496,
+            "dur": 6,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv2/Relu_grad/ReluGrad",
+                "op": "ReluGrad",
+                "input0": "sgd_optimizer/gradients/conv3/Conv2D_grad/tuple/control_dependency",
+                "input1": "conv2/Relu"
+            },
+            "name": "ReluGrad",
+            "tid": 0,
+            "ts": 1504747284401510,
+            "dur": 30,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "input2": "sgd_optimizer/gradients/conv3/Conv2D_grad/tuple/control_dependency_1",
+                "name": "sgd_optimizer/GradientDescent/update_conv3/Variable/ApplyGradientDescent",
+                "op": "ApplyGradientDescent",
+                "input0": "conv3/Variable",
+                "input1": "sgd_optimizer/GradientDescent/learning_rate"
+            },
+            "name": "ApplyGradientDescent",
+            "tid": 0,
+            "ts": 1504747284401544,
+            "dur": 53,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv2/BiasAdd_grad/BiasAddGrad",
+                "op": "BiasAddGrad",
+                "input0": "sgd_optimizer/gradients/conv2/Relu_grad/ReluGrad"
+            },
+            "name": "BiasAddGrad",
+            "tid": 0,
+            "ts": 1504747284401602,
+            "dur": 60,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv2/BiasAdd_grad/tuple/group_deps",
+                "op": "NoOp",
+                "input0": "^sgd_optimizer/gradients/conv2/Relu_grad/ReluGrad",
+                "input1": "^sgd_optimizer/gradients/conv2/BiasAdd_grad/BiasAddGrad"
+            },
+            "name": "NoOp",
+            "tid": 0,
+            "ts": 1504747284401666,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv2/BiasAdd_grad/tuple/control_dependency",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/conv2/Relu_grad/ReluGrad",
+                "input1": "^sgd_optimizer/gradients/conv2/BiasAdd_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284401673,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv2/BiasAdd_grad/tuple/control_dependency_1",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/conv2/BiasAdd_grad/BiasAddGrad",
+                "input1": "^sgd_optimizer/gradients/conv2/BiasAdd_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284401680,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "input2": "sgd_optimizer/gradients/conv2/BiasAdd_grad/tuple/control_dependency",
+                "name": "sgd_optimizer/gradients/conv2/Conv2D_grad/Conv2DBackpropInput",
+                "op": "Conv2DBackpropInput",
+                "input0": "sgd_optimizer/gradients/conv2/Conv2D_grad/Shape",
+                "input1": "conv2/Variable/read"
+            },
+            "name": "Conv2DBackpropInput",
+            "tid": 0,
+            "ts": 1504747284401689,
+            "dur": 154,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "input2": "sgd_optimizer/gradients/conv2/BiasAdd_grad/tuple/control_dependency",
+                "name": "sgd_optimizer/gradients/conv2/Conv2D_grad/Conv2DBackpropFilter",
+                "op": "Conv2DBackpropFilter",
+                "input0": "conv1/Relu",
+                "input1": "sgd_optimizer/gradients/conv2/Conv2D_grad/Shape_1"
+            },
+            "name": "Conv2DBackpropFilter",
+            "tid": 0,
+            "ts": 1504747284401853,
+            "dur": 153,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "input2": "sgd_optimizer/gradients/conv2/BiasAdd_grad/tuple/control_dependency_1",
+                "name": "sgd_optimizer/GradientDescent/update_conv2/Variable_1/ApplyGradientDescent",
+                "op": "ApplyGradientDescent",
+                "input0": "conv2/Variable_1",
+                "input1": "sgd_optimizer/GradientDescent/learning_rate"
+            },
+            "name": "ApplyGradientDescent",
+            "tid": 0,
+            "ts": 1504747284402015,
+            "dur": 31,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv2/Conv2D_grad/tuple/group_deps",
+                "op": "NoOp",
+                "input0": "^sgd_optimizer/gradients/conv2/Conv2D_grad/Conv2DBackpropInput",
+                "input1": "^sgd_optimizer/gradients/conv2/Conv2D_grad/Conv2DBackpropFilter"
+            },
+            "name": "NoOp",
+            "tid": 0,
+            "ts": 1504747284402050,
+            "dur": 3,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv2/Conv2D_grad/tuple/control_dependency",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/conv2/Conv2D_grad/Conv2DBackpropInput",
+                "input1": "^sgd_optimizer/gradients/conv2/Conv2D_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284402055,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv2/Conv2D_grad/tuple/control_dependency_1",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/conv2/Conv2D_grad/Conv2DBackpropFilter",
+                "input1": "^sgd_optimizer/gradients/conv2/Conv2D_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284402067,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv1/Relu_grad/ReluGrad",
+                "op": "ReluGrad",
+                "input0": "sgd_optimizer/gradients/conv2/Conv2D_grad/tuple/control_dependency",
+                "input1": "conv1/Relu"
+            },
+            "name": "ReluGrad",
+            "tid": 0,
+            "ts": 1504747284402073,
+            "dur": 27,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "input2": "sgd_optimizer/gradients/conv2/Conv2D_grad/tuple/control_dependency_1",
+                "name": "sgd_optimizer/GradientDescent/update_conv2/Variable/ApplyGradientDescent",
+                "op": "ApplyGradientDescent",
+                "input0": "conv2/Variable",
+                "input1": "sgd_optimizer/GradientDescent/learning_rate"
+            },
+            "name": "ApplyGradientDescent",
+            "tid": 0,
+            "ts": 1504747284402103,
+            "dur": 23,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv1/BiasAdd_grad/BiasAddGrad",
+                "op": "BiasAddGrad",
+                "input0": "sgd_optimizer/gradients/conv1/Relu_grad/ReluGrad"
+            },
+            "name": "BiasAddGrad",
+            "tid": 0,
+            "ts": 1504747284402133,
+            "dur": 40,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv1/BiasAdd_grad/tuple/group_deps",
+                "op": "NoOp",
+                "input0": "^sgd_optimizer/gradients/conv1/Relu_grad/ReluGrad",
+                "input1": "^sgd_optimizer/gradients/conv1/BiasAdd_grad/BiasAddGrad"
+            },
+            "name": "NoOp",
+            "tid": 0,
+            "ts": 1504747284402175,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv1/BiasAdd_grad/tuple/control_dependency",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/conv1/Relu_grad/ReluGrad",
+                "input1": "^sgd_optimizer/gradients/conv1/BiasAdd_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284402181,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv1/BiasAdd_grad/tuple/control_dependency_1",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/conv1/BiasAdd_grad/BiasAddGrad",
+                "input1": "^sgd_optimizer/gradients/conv1/BiasAdd_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284402187,
+            "dur": 9,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "input2": "sgd_optimizer/gradients/conv1/BiasAdd_grad/tuple/control_dependency",
+                "name": "sgd_optimizer/gradients/conv1/Conv2D_grad/Conv2DBackpropInput",
+                "op": "Conv2DBackpropInput",
+                "input0": "sgd_optimizer/gradients/conv1/Conv2D_grad/Shape",
+                "input1": "conv1/Variable/read"
+            },
+            "name": "Conv2DBackpropInput",
+            "tid": 0,
+            "ts": 1504747284402198,
+            "dur": 123,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "input2": "sgd_optimizer/gradients/conv1/BiasAdd_grad/tuple/control_dependency",
+                "name": "sgd_optimizer/gradients/conv1/Conv2D_grad/Conv2DBackpropFilter",
+                "op": "Conv2DBackpropFilter",
+                "input0": "_arg_input_0_0/_9",
+                "input1": "sgd_optimizer/gradients/conv1/Conv2D_grad/Shape_1"
+            },
+            "name": "Conv2DBackpropFilter",
+            "tid": 0,
+            "ts": 1504747284402329,
+            "dur": 123,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "name": "_arg_input_0_0",
+            "tid": 0,
+            "ts": 1504747284398354,
+            "cat": "DataFlow",
+            "pid": 3,
+            "id": 8,
+            "ph": "s"
+        },
+        {
+            "name": "_arg_input_0_0",
+            "tid": 0,
+            "ts": 1504747284402329,
+            "cat": "DataFlow",
+            "pid": 1,
+            "id": 8,
+            "ph": "t"
+        },
+        {
+            "args": {
+                "input2": "sgd_optimizer/gradients/conv1/BiasAdd_grad/tuple/control_dependency_1",
+                "name": "sgd_optimizer/GradientDescent/update_conv1/Variable_1/ApplyGradientDescent",
+                "op": "ApplyGradientDescent",
+                "input0": "conv1/Variable_1",
+                "input1": "sgd_optimizer/GradientDescent/learning_rate"
+            },
+            "name": "ApplyGradientDescent",
+            "tid": 0,
+            "ts": 1504747284402458,
+            "dur": 30,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv1/Conv2D_grad/tuple/group_deps",
+                "op": "NoOp",
+                "input0": "^sgd_optimizer/gradients/conv1/Conv2D_grad/Conv2DBackpropInput",
+                "input1": "^sgd_optimizer/gradients/conv1/Conv2D_grad/Conv2DBackpropFilter"
+            },
+            "name": "NoOp",
+            "tid": 0,
+            "ts": 1504747284402492,
+            "dur": 4,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/gradients/conv1/Conv2D_grad/tuple/control_dependency_1",
+                "op": "Identity",
+                "input0": "sgd_optimizer/gradients/conv1/Conv2D_grad/Conv2DBackpropFilter",
+                "input1": "^sgd_optimizer/gradients/conv1/Conv2D_grad/tuple/group_deps"
+            },
+            "name": "Identity",
+            "tid": 0,
+            "ts": 1504747284402514,
+            "dur": 5,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "input2": "sgd_optimizer/gradients/conv1/Conv2D_grad/tuple/control_dependency_1",
+                "name": "sgd_optimizer/GradientDescent/update_conv1/Variable/ApplyGradientDescent",
+                "op": "ApplyGradientDescent",
+                "input0": "conv1/Variable",
+                "input1": "sgd_optimizer/GradientDescent/learning_rate"
+            },
+            "name": "ApplyGradientDescent",
+            "tid": 0,
+            "ts": 1504747284402521,
+            "dur": 26,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "sgd_optimizer/GradientDescent",
+                "input0": "^sgd_optimizer/GradientDescent/update_conv1/Variable/ApplyGradientDescent",
+                "input8": "^sgd_optimizer/GradientDescent/update_fc2/Variable/ApplyGradientDescent",
+                "input3": "^sgd_optimizer/GradientDescent/update_conv2/Variable_1/ApplyGradientDescent",
+                "input9": "^sgd_optimizer/GradientDescent/update_fc2/Variable_1/ApplyGradientDescent",
+                "input1": "^sgd_optimizer/GradientDescent/update_conv1/Variable_1/ApplyGradientDescent",
+                "input7": "^sgd_optimizer/GradientDescent/update_fc1/Variable_1/ApplyGradientDescent",
+                "op": "NoOp",
+                "input2": "^sgd_optimizer/GradientDescent/update_conv2/Variable/ApplyGradientDescent",
+                "input4": "^sgd_optimizer/GradientDescent/update_conv3/Variable/ApplyGradientDescent",
+                "input6": "^sgd_optimizer/GradientDescent/update_fc1/Variable/ApplyGradientDescent",
+                "input5": "^sgd_optimizer/GradientDescent/update_conv3/Variable_1/ApplyGradientDescent"
+            },
+            "name": "NoOp",
+            "tid": 0,
+            "ts": 1504747284402550,
+            "dur": 6,
+            "cat": "Op",
+            "pid": 1,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "_SOURCE",
+                "op": "NoOp"
+            },
+            "name": "NoOp",
+            "tid": 0,
+            "ts": 1504747284398300,
+            "dur": 14,
+            "cat": "Op",
+            "pid": 3,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "_arg_input_0_0",
+                "op": "_Arg"
+            },
+            "name": "_Arg",
+            "tid": 0,
+            "ts": 1504747284398338,
+            "dur": 16,
+            "cat": "Op",
+            "pid": 3,
+            "ph": "X"
+        },
+        {
+            "args": {
+                "name": "_arg_target_0_1",
+                "op": "_Arg"
+            },
+            "name": "_Arg",
+            "tid": 0,
+            "ts": 1504747284398367,
+            "dur": 16,
+            "cat": "Op",
+            "pid": 3,
+            "ph": "X"
+        }
+    ]
+}
